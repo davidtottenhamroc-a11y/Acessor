@@ -63,11 +63,6 @@
             50% { transform: scale(1.2); color: var(--accent-gold); }
             100% { transform: scale(1); }
         }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
 
         .fade-in-up { animation: fadeInUp 0.5s ease-out; }
         .slide-in { animation: slideIn 0.4s ease-out; }
@@ -459,6 +454,45 @@
             align-items: center;
         }
 
+        .history-log {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .history-log .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+        }
+        .history-log .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .week-tasks-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .week-tasks-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .grid-week { grid-template-columns: repeat(3, 1fr); }
@@ -521,7 +555,6 @@
                 <span id="notification-area"></span>
                 <div class="user-avatar" id="user-avatar-display">?</div>
                 <span class="user-name" id="user-name-display"></span>
-                <span id="level-display-header"></span>
                 <button class="btn-logout" onclick="logout()">🚪 Sair</button>
             </div>
         </header>
@@ -562,7 +595,16 @@
                         <option value="quinta">Quinta-feira</option>
                         <option value="sexta">Sexta-feira</option>
                     </select>
-                    <input type="time" id="adm-task-time" class="mb-1" placeholder="Horário">
+                    <div style="display:flex;gap:10px;margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <label style="font-size:12px;color:var(--text-secondary);">Horário Início</label>
+                            <input type="time" id="adm-task-time-start">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:12px;color:var(--text-secondary);">Horário Fim</label>
+                            <input type="time" id="adm-task-time-end">
+                        </div>
+                    </div>
                     <input type="text" id="adm-task-name" class="mb-1" placeholder="Nome da matéria/tarefa">
                     <button class="btn btn-primary" onclick="admAddTask()" style="width:100%;justify-content:center;">
                         ➕ Adicionar Tarefa
@@ -581,6 +623,14 @@
                 </div>
             </div>
 
+            <!-- REGISTRO DE ALTERAÇÕES -->
+            <div class="card mt-2">
+                <div class="card-title">📋 Registro de Atividades dos Alunos</div>
+                <div id="adm-activity-log">
+                    <p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>
+                </div>
+            </div>
+
             <!-- VISUALIZAR TAREFAS -->
             <div class="card mt-2">
                 <div class="card-title">📌 Tarefas Cadastradas</div>
@@ -593,7 +643,7 @@
 
         <!-- VIEW ALUNO -->
         <div id="aluno-view" class="hidden fade-in-up">
-            <!-- XP e LEVEL -->
+            <!-- XP e LEVEL (apenas para aluno) -->
             <div class="card">
                 <div class="level-display">
                     <span style="font-size:30px;">⚡</span>
@@ -614,26 +664,26 @@
                         <div class="achievement-icon">💡</div>
                         <small>3 Dúvidas</small>
                     </div>
-                    <div class="achievement locked" id="ach-3" title="Sequência de 3 dias">
-                        <div class="achievement-icon">🔥</div>
-                        <small>3 Dias</small>
+                    <div class="achievement locked" id="ach-3" title="Voltar de Não Feito para Feito">
+                        <div class="achievement-icon">🔄</div>
+                        <small>Recuperação</small>
                     </div>
                 </div>
             </div>
 
-            <!-- AGENDA DA SEMANA -->
+            <!-- AGENDA COMPLETA DA SEMANA -->
             <div class="card">
-                <div class="card-title">📅 Minha Agenda Semanal</div>
+                <div class="card-title">📅 Minha Agenda da Semana</div>
                 <div class="grid-week" id="week-overview"></div>
             </div>
 
-            <!-- TAREFAS DO DIA -->
+            <!-- TAREFAS DO DIA SELECIONADO -->
             <div class="card">
-                <div class="card-title">
-                    📌 Tarefas de Hoje (<span id="today-name"></span>)
+                <div class="card-title" id="selected-day-title">
+                    📌 Todas as Tarefas
                 </div>
-                <div id="aluno-tasks-today">
-                    <p style="color:var(--text-secondary);">Nenhuma tarefa para hoje</p>
+                <div id="aluno-tasks-display">
+                    <p style="color:var(--text-secondary);">Clique em um dia para ver as tarefas</p>
                 </div>
             </div>
 
@@ -650,19 +700,39 @@
     </div>
 </div>
 
-<!-- MODAL DE JUSTIFICATIVA -->
+<!-- MODAL DE JUSTIFICATIVA (NÃO FEITO) -->
 <div id="justify-modal" class="modal-overlay hidden">
     <div class="modal fade-in-up">
         <h3>📝 Justificativa</h3>
         <p style="color:var(--text-secondary);margin-bottom:10px;">
             Por que esta tarefa não foi realizada?
         </p>
-        <textarea id="justify-text" placeholder="Sua justificativa (opcional)..."></textarea>
+        <textarea id="justify-text" placeholder="Sua justificativa (obrigatória)..."></textarea>
         <div style="display:flex;gap:10px;margin-top:15px;">
-            <button class="btn btn-danger" onclick="confirmJustify()" style="flex:1;justify-content:center;">
+            <button class="btn btn-danger" onclick="confirmNotDone()" style="flex:1;justify-content:center;">
                 Confirmar Não Feito
             </button>
             <button class="btn" onclick="closeJustifyModal()" 
+                    style="flex:1;justify-content:center;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE JUSTIFICATIVA (MUDAR DE NÃO FEITO PARA REALIZADO) -->
+<div id="recover-modal" class="modal-overlay hidden">
+    <div class="modal fade-in-up">
+        <h3>🔄 Recuperação de Tarefa</h3>
+        <p style="color:var(--text-secondary);margin-bottom:10px;">
+            Esta tarefa estava como "Não Feito". Para marcar como "Realizado", explique o que mudou:
+        </p>
+        <textarea id="recover-text" placeholder="Justificativa obrigatória para recuperar a tarefa..."></textarea>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button class="btn btn-success" onclick="confirmRecover()" style="flex:1;justify-content:center;">
+                ✅ Confirmar Realizado
+            </button>
+            <button class="btn" onclick="closeRecoverModal()" 
                     style="flex:1;justify-content:center;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);">
                 Cancelar
             </button>
@@ -675,9 +745,9 @@
 
 <script>
 // ============================================================
-// 🗄️ BANCO DE DADOS (localStorage)
+// 🗄️ BANCO DE DADOS
 // ============================================================
-const DB_KEY = 'studyquest_db_v2';
+const DB_KEY = 'studyquest_db_v3';
 
 function getDefaultDB() {
     return {
@@ -701,7 +771,8 @@ function getDefaultDB() {
             }
         ],
         tasks: [],
-        questions: []
+        questions: [],
+        activityLog: [] // { id, timestamp, alunoId, taskId, oldStatus, newStatus, justification, alunoName, taskName }
     };
 }
 
@@ -726,7 +797,9 @@ let DB = loadDB();
 // ============================================================
 let currentUser = null;
 let selectedRole = null;
-let pendingJustifyTaskId = null;
+let pendingTaskId = null;
+let pendingAction = null; // 'notdone' ou 'recover'
+let selectedDay = null;
 
 // ============================================================
 // 🎯 LOGIN
@@ -784,6 +857,7 @@ function doLogin() {
 function logout() {
     currentUser = null;
     selectedRole = null;
+    selectedDay = null;
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('main-panel').classList.add('hidden');
     document.getElementById('adm-view').classList.add('hidden');
@@ -792,6 +866,29 @@ function logout() {
     document.getElementById('login-password').value = '';
     document.getElementById('role-adm-btn').classList.remove('selected');
     document.getElementById('role-aluno-btn').classList.remove('selected');
+}
+
+// ============================================================
+// 📋 REGISTRO DE ATIVIDADES
+// ============================================================
+function addActivityLog(alunoId, taskId, oldStatus, newStatus, justification) {
+    const aluno = DB.users.find(u => u.id === alunoId);
+    const task = DB.tasks.find(t => t.id === taskId);
+    
+    const logEntry = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleString('pt-BR'),
+        alunoId,
+        taskId,
+        oldStatus,
+        newStatus,
+        justification: justification || '',
+        alunoName: aluno ? aluno.name : 'Aluno',
+        taskName: task ? task.name : 'Tarefa'
+    };
+    
+    DB.activityLog.push(logEntry);
+    saveDB(DB);
 }
 
 // ============================================================
@@ -826,14 +923,12 @@ function updateAdmSelects() {
         u.role === 'aluno' && currentUser.alunosVinculados.includes(u.id)
     );
     
-    // Select para cadastrar tarefa
     const selectAluno = document.getElementById('adm-select-aluno');
     selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
     alunosVinculados.forEach(a => {
         selectAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
     });
     
-    // Select para filtrar tarefas
     const filterAluno = document.getElementById('adm-filter-aluno');
     filterAluno.innerHTML = '<option value="all">Todos os alunos</option>';
     alunosVinculados.forEach(a => {
@@ -850,7 +945,6 @@ function admCadastrarAluno() {
         return;
     }
     
-    // Verificar se já existe
     const exists = DB.users.find(u => u.name.toLowerCase() === name.toLowerCase());
     if (exists) {
         showToast('⚠️ Já existe um usuário com este nome!', 'warning');
@@ -872,13 +966,11 @@ function admCadastrarAluno() {
     DB.users.push(newAluno);
     currentUser.alunosVinculados.push(newAlunoId);
     
-    // Atualizar o ADM no DB
     const admInDB = DB.users.find(u => u.id === currentUser.id);
     if (admInDB) admInDB.alunosVinculados = currentUser.alunosVinculados;
     
     saveDB(DB);
     
-    // Limpar campos
     document.getElementById('new-aluno-name').value = '';
     document.getElementById('new-aluno-password').value = '';
     
@@ -892,19 +984,16 @@ function admRemoverAluno(alunoId) {
     const aluno = DB.users.find(u => u.id === alunoId);
     if (!aluno) return;
     
-    if (!confirm(`Tem certeza que deseja remover o aluno "${aluno.name}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Tem certeza que deseja remover o aluno "${aluno.name}"?`)) return;
     
-    // Remover vínculo
     currentUser.alunosVinculados = currentUser.alunosVinculados.filter(id => id !== alunoId);
     const admInDB = DB.users.find(u => u.id === currentUser.id);
     if (admInDB) admInDB.alunosVinculados = currentUser.alunosVinculados;
     
-    // Remover aluno
     DB.users = DB.users.filter(u => u.id !== alunoId);
-    
-    // Remover tarefas e dúvidas do aluno
     DB.tasks = DB.tasks.filter(t => t.alunoId !== alunoId);
     DB.questions = DB.questions.filter(q => q.alunoId !== alunoId);
+    DB.activityLog = DB.activityLog.filter(log => log.alunoId !== alunoId);
     
     saveDB(DB);
     updateAdmAlunosList();
@@ -916,11 +1005,17 @@ function admRemoverAluno(alunoId) {
 function admAddTask() {
     const alunoId = document.getElementById('adm-select-aluno').value;
     const day = document.getElementById('adm-select-day').value;
-    const time = document.getElementById('adm-task-time').value;
+    const timeStart = document.getElementById('adm-task-time-start').value;
+    const timeEnd = document.getElementById('adm-task-time-end').value;
     const name = document.getElementById('adm-task-name').value.trim();
     
-    if (!alunoId || !time || !name) {
+    if (!alunoId || !timeStart || !timeEnd || !name) {
         showToast('⚠️ Preencha todos os campos!', 'warning');
+        return;
+    }
+    
+    if (timeStart >= timeEnd) {
+        showToast('⚠️ Horário de início deve ser menor que o fim!', 'warning');
         return;
     }
     
@@ -928,7 +1023,8 @@ function admAddTask() {
         id: Date.now(),
         alunoId,
         day,
-        time,
+        timeStart,
+        timeEnd,
         name,
         status: 'Pendente',
         justification: ''
@@ -936,10 +1032,14 @@ function admAddTask() {
     
     DB.tasks.push(newTask);
     saveDB(DB);
+    
+    addActivityLog(alunoId, newTask.id, '-', 'Pendente', 'Tarefa criada pelo assessor');
+    
     renderAll();
     showToast('✅ Tarefa cadastrada com sucesso!', 'success');
     
-    document.getElementById('adm-task-time').value = '';
+    document.getElementById('adm-task-time-start').value = '';
+    document.getElementById('adm-task-time-end').value = '';
     document.getElementById('adm-task-name').value = '';
 }
 
@@ -967,14 +1067,18 @@ function admRenderTasks() {
         'Não Feito': 'badge-notdone'
     };
     
-    container.innerHTML = tasksToShow.map(t => {
+    container.innerHTML = tasksToShow.sort((a,b) => {
+        const dayOrder = ['segunda','terca','quarta','quinta','sexta'];
+        if (a.day !== b.day) return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+        return a.timeStart.localeCompare(b.timeStart);
+    }).map(t => {
         const aluno = DB.users.find(u => u.id === t.alunoId);
         return `
             <div class="task-item slide-in">
                 <div class="task-info">
                     <strong>${aluno ? aluno.name : 'Aluno'}</strong> • 
                     <span style="color:var(--text-secondary);">${dayNames[t.day]}</span>
-                    <span class="task-time">${t.time}</span> - ${t.name}
+                    <span class="task-time">${t.timeStart} - ${t.timeEnd}</span> | ${t.name}
                     <br>
                     <span class="badge ${statusBadges[t.status]}">${t.status}</span>
                     ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
@@ -1047,6 +1151,45 @@ function admAnswerQuestion(qId) {
     }
 }
 
+function admRenderActivityLog() {
+    const container = document.getElementById('adm-activity-log');
+    
+    const logs = DB.activityLog
+        .filter(log => currentUser.alunosVinculados.includes(log.alunoId))
+        .sort((a,b) => b.id - a.id)
+        .slice(0, 50);
+    
+    if (logs.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="history-log">
+            ${logs.map(log => {
+                const statusEmoji = {
+                    'Pendente': '🟡',
+                    'Em Andamento': '🔵',
+                    'Realizado': '🟢',
+                    'Não Feito': '🔴',
+                    '-': '🆕'
+                };
+                const oldEmoji = statusEmoji[log.oldStatus] || '⚪';
+                const newEmoji = statusEmoji[log.newStatus] || '⚪';
+                
+                return `
+                    <div class="log-entry">
+                        <strong>${log.timestamp}</strong> - 
+                        ${log.alunoName} | ${log.taskName}<br>
+                        ${oldEmoji} ${log.oldStatus} → ${newEmoji} ${log.newStatus}
+                        ${log.justification ? `<br><small>📝 ${log.justification}</small>` : ''}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
 // ============================================================
 // 🎒 FUNÇÕES DO ALUNO
 // ============================================================
@@ -1073,10 +1216,6 @@ function updateAlunoXP() {
     document.getElementById('aluno-level').textContent = level;
     document.getElementById('aluno-xp').textContent = xpInLevel;
     document.getElementById('aluno-xp-bar').style.width = xpInLevel + '%';
-    document.getElementById('level-display-header').innerHTML = `
-        <span style="font-size:12px;">Nível</span>
-        <span class="level-number">${level}</span>
-    `;
 }
 
 function gainXP(amount) {
@@ -1100,6 +1239,9 @@ function updateAchievements() {
     const questions = getAlunoQuestions();
     const doneTasks = tasks.filter(t => t.status === 'Realizado').length;
     const sentQuestions = questions.length;
+    const recoveredTasks = DB.activityLog.filter(
+        log => log.alunoId === currentUser.id && log.oldStatus === 'Não Feito' && log.newStatus === 'Realizado'
+    ).length;
     
     const achievs = currentUser.achievements || [];
     
@@ -1111,6 +1253,10 @@ function updateAchievements() {
         achievs.push('ach2');
         showToast('💡 Conquista desbloqueada: Curioso!', 'success');
     }
+    if (recoveredTasks >= 1 && !achievs.includes('ach3')) {
+        achievs.push('ach3');
+        showToast('🔄 Conquista desbloqueada: Segunda Chance!', 'success');
+    }
     
     currentUser.achievements = achievs;
     const userInDB = DB.users.find(u => u.id === currentUser.id);
@@ -1121,6 +1267,8 @@ function updateAchievements() {
     document.getElementById('ach-1').classList.toggle('locked', !achievs.includes('ach1'));
     document.getElementById('ach-2').classList.toggle('unlocked', achievs.includes('ach2'));
     document.getElementById('ach-2').classList.toggle('locked', !achievs.includes('ach2'));
+    document.getElementById('ach-3').classList.toggle('unlocked', achievs.includes('ach3'));
+    document.getElementById('ach-3').classList.toggle('locked', !achievs.includes('ach3'));
 }
 
 function renderWeekOverview() {
@@ -1129,26 +1277,36 @@ function renderWeekOverview() {
     const dayNames = { segunda:'Seg', terca:'Ter', quarta:'Qua', quinta:'Qui', sexta:'Sex' };
     const today = getTodayDay();
     
-    document.getElementById('today-name').textContent = 
-        dayNames[today] ? dayNames[today] + '-feira' : 'Hoje';
-    
     const tasks = getAlunoTasks();
     
     container.innerHTML = days.map(day => {
         const dayTasks = tasks.filter(t => t.day === day);
         const isToday = day === today;
         const doneCount = dayTasks.filter(t => t.status === 'Realizado').length;
+        const notDoneCount = dayTasks.filter(t => t.status === 'Não Feito').length;
+        const pendingCount = dayTasks.filter(t => t.status === 'Pendente').length;
         
         return `
-            <div class="day-card ${isToday ? 'today' : ''}">
+            <div class="day-card ${isToday ? 'today' : ''}" onclick="selectDay('${day}')">
                 <span class="day-name">${dayNames[day]}</span>
-                <span class="task-count">
-                    ${doneCount}/${dayTasks.length} ✅
-                </span>
+                ${dayTasks.length > 0 ? `
+                    <span class="task-count">
+                        ${doneCount}/${dayTasks.length} ✅
+                        ${notDoneCount > 0 ? ` ${notDoneCount}❌` : ''}
+                        ${pendingCount > 0 ? ` ${pendingCount}⏳` : ''}
+                    </span>
+                ` : `
+                    <span class="task-count" style="color:var(--text-secondary);">Sem tarefas</span>
+                `}
                 ${isToday ? '<span style="font-size:10px;color:var(--accent-purple);">HOJE</span>' : ''}
             </div>
         `;
     }).join('');
+    
+    // Se nenhum dia selecionado, mostrar tarefas de hoje
+    if (!selectedDay) {
+        selectDay(today);
+    }
 }
 
 function getTodayDay() {
@@ -1157,13 +1315,19 @@ function getTodayDay() {
     return map[dayNum] || 'segunda';
 }
 
-function renderAlunoTasksToday() {
-    const container = document.getElementById('aluno-tasks-today');
-    const today = getTodayDay();
-    const tasks = getAlunoTasks().filter(t => t.day === today);
+function selectDay(day) {
+    selectedDay = day;
+    const dayNames = { segunda:'Segunda-feira', terca:'Terça-feira', quarta:'Quarta-feira', quinta:'Quinta-feira', sexta:'Sexta-feira' };
+    document.getElementById('selected-day-title').textContent = `📌 Tarefas de ${dayNames[day]}`;
+    renderAlunoTasksByDay(day);
+}
+
+function renderAlunoTasksByDay(day) {
+    const container = document.getElementById('aluno-tasks-display');
+    const tasks = getAlunoTasks().filter(t => t.day === day);
     
     if (tasks.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa para hoje!</p>';
+        container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa cadastrada para este dia</p>';
         return;
     }
     
@@ -1174,25 +1338,32 @@ function renderAlunoTasksToday() {
         'Não Feito': 'badge-notdone'
     };
     
-    container.innerHTML = tasks.map(t => `
+    container.innerHTML = tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart)).map(t => `
         <div class="task-item slide-in">
             <div class="task-info">
-                <span class="task-time">🕐 ${t.time}</span>
+                <span class="task-time">🕐 ${t.timeStart} - ${t.timeEnd}</span>
                 <strong>${t.name}</strong>
                 <br>
                 <span class="badge ${statusBadges[t.status]}">${t.status}</span>
                 ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
+                ${t.status === 'Não Feito' ? '<br><small style="color:var(--accent-orange);">⚠️ Requer justificativa para alterar</small>' : ''}
             </div>
             <div class="task-actions">
-                <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')">
-                    ✅
-                </button>
-                <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')">
-                    🔄
-                </button>
-                <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})">
-                    ❌
-                </button>
+                ${t.status !== 'Não Feito' ? `
+                    <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')">
+                        ✅
+                    </button>
+                    <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')">
+                        🔄
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})">
+                        ❌
+                    </button>
+                ` : `
+                    <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${t.id})">
+                        🔄 Recuperar
+                    </button>
+                `}
             </div>
         </div>
     `).join('');
@@ -1202,11 +1373,18 @@ function alunoUpdateTaskStatus(taskId, newStatus) {
     const task = DB.tasks.find(t => t.id === taskId);
     if (!task) return;
     
+    if (task.status === 'Não Feito' && newStatus !== 'Não Feito') {
+        showToast('⚠️ Use o botão "Recuperar" para tarefas não feitas!', 'warning');
+        return;
+    }
+    
     const oldStatus = task.status;
     task.status = newStatus;
     if (newStatus !== 'Não Feito') task.justification = '';
     
     saveDB(DB);
+    
+    addActivityLog(currentUser.id, taskId, oldStatus, newStatus, '');
     
     if (newStatus === 'Realizado' && oldStatus !== 'Realizado') {
         gainXP(15);
@@ -1219,20 +1397,30 @@ function alunoUpdateTaskStatus(taskId, newStatus) {
 }
 
 function alunoMarkNotDone(taskId) {
-    pendingJustifyTaskId = taskId;
+    pendingTaskId = taskId;
+    pendingAction = 'notdone';
     document.getElementById('justify-text').value = '';
     document.getElementById('justify-modal').classList.remove('hidden');
 }
 
-function confirmJustify() {
-    if (!pendingJustifyTaskId) return;
+function confirmNotDone() {
+    if (!pendingTaskId) return;
     
     const justification = document.getElementById('justify-text').value.trim();
-    const task = DB.tasks.find(t => t.id === pendingJustifyTaskId);
+    if (!justification) {
+        showToast('⚠️ A justificativa é obrigatória!', 'warning');
+        return;
+    }
+    
+    const task = DB.tasks.find(t => t.id === pendingTaskId);
     if (task) {
+        const oldStatus = task.status;
         task.status = 'Não Feito';
-        task.justification = justification || '(sem justificativa)';
+        task.justification = justification;
         saveDB(DB);
+        
+        addActivityLog(currentUser.id, pendingTaskId, oldStatus, 'Não Feito', justification);
+        
         gainXP(2);
         showToast('📝 Status atualizado! Notificação enviada ao assessor', 'info');
     }
@@ -1243,7 +1431,47 @@ function confirmJustify() {
 
 function closeJustifyModal() {
     document.getElementById('justify-modal').classList.add('hidden');
-    pendingJustifyTaskId = null;
+    pendingTaskId = null;
+    pendingAction = null;
+}
+
+function alunoRecoverTask(taskId) {
+    pendingTaskId = taskId;
+    pendingAction = 'recover';
+    document.getElementById('recover-text').value = '';
+    document.getElementById('recover-modal').classList.remove('hidden');
+}
+
+function confirmRecover() {
+    if (!pendingTaskId) return;
+    
+    const justification = document.getElementById('recover-text').value.trim();
+    if (!justification) {
+        showToast('⚠️ A justificativa é obrigatória para recuperar!', 'warning');
+        return;
+    }
+    
+    const task = DB.tasks.find(t => t.id === pendingTaskId);
+    if (task) {
+        const oldStatus = task.status;
+        task.status = 'Realizado';
+        task.justification = justification;
+        saveDB(DB);
+        
+        addActivityLog(currentUser.id, pendingTaskId, oldStatus, 'Realizado', justification);
+        
+        gainXP(25); // Mais XP por recuperar uma tarefa
+        showToast('🔄 Tarefa recuperada! +25 XP', 'success');
+    }
+    
+    closeRecoverModal();
+    renderAll();
+}
+
+function closeRecoverModal() {
+    document.getElementById('recover-modal').classList.add('hidden');
+    pendingTaskId = null;
+    pendingAction = null;
 }
 
 function alunoSendQuestion() {
@@ -1299,11 +1527,14 @@ function renderAll() {
     if (currentUser.role === 'adm') {
         admRenderTasks();
         admRenderQuestions();
+        admRenderActivityLog();
         updateAdmAlunosList();
         updateAdmSelects();
     } else {
         renderWeekOverview();
-        renderAlunoTasksToday();
+        if (selectedDay) {
+            renderAlunoTasksByDay(selectedDay);
+        }
         renderAlunoQuestions();
         updateAlunoXP();
         updateAchievements();
