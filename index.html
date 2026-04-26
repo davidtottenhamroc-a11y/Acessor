@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyQuest - Assessoria Gamificada</title>
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #131837;
+            --bg-card: #1a1f42;
+            --bg-input: #0f1330;
+            --text-primary: #e8eaf6;
+            --text-secondary: #9fa8da;
+            --accent-blue: #4fc3f7;
+            --accent-purple: #7c4dff;
+            --accent-green: #69f0ae;
+            --accent-orange: #ffab40;
+            --accent-red: #ff5252;
+            --accent-gold: #ffd740;
+            --border-color: #2a2f5c;
+            --xp-bar: #7c4dff;
+            --level-badge: #ffd740;
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+            --glow-blue: 0 0 20px rgba(79,195,247,0.3);
+            --glow-purple: 0 0 20px rgba(124,77,255,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(124,77,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(79,195,247,0.08) 0%, transparent 50%);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(79,195,247,0.3); }
+            50% { box-shadow: 0 0 20px rgba(79,195,247,0.6); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes xpGain {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: var(--accent-gold); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        .slide-in { animation: slideIn 0.4s ease-out; }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: var(--shadow);
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            font-size: 36px;
+            animation: float 3s ease-in-out infinite;
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .user-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .btn-logout {
+            background: rgba(255,82,82,0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-logout:hover {
+            background: rgba(255,82,82,0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            color: white;
+            box-shadow: var(--glow-purple);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #2e7d32, var(--accent-green));
+            color: #0a0e27;
+            font-weight: 700;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #e65100, var(--accent-orange));
+            color: #0a0e27;
+            font-weight: 700;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #b71c1c, var(--accent-red));
+            color: white;
+        }
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+        }
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .grid-week { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+
+        input, select, textarea {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: var(--glow-blue);
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-pending { background: rgba(255,171,64,0.2); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+        .badge-doing { background: rgba(79,195,247,0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+        .badge-done { background: rgba(105,240,174,0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .badge-notdone { background: rgba(255,82,82,0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+        .badge-new { background: rgba(124,77,255,0.3); color: #b388ff; border: 1px solid #b388ff; animation: pulse 2s infinite; }
+
+        .xp-container {
+            background: var(--bg-input);
+            border-radius: 20px;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+        }
+        .xp-bar-outer {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .xp-bar-inner {
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-gold));
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.8s ease;
+        }
+        .level-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .level-number {
+            background: var(--accent-gold);
+            color: #0a0e27;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 16px;
+        }
+
+        .achievements-grid {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .achievement {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            min-width: 80px;
+            transition: all 0.3s;
+        }
+        .achievement.unlocked {
+            border-color: var(--accent-gold);
+            animation: glow 2s infinite;
+        }
+        .achievement.locked {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+        .achievement-icon { font-size: 30px; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--shadow);
+        }
+        .modal h3 { margin-bottom: 15px; }
+
+        .notification-badge {
+            background: var(--accent-red);
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            animation: pulse 1.5s infinite;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-green);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            z-index: 2000;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .day-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .day-card:hover { border-color: var(--accent-blue); transform: translateY(-3px); }
+        .day-card.today {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+            background: rgba(124,77,255,0.1);
+        }
+        .day-card .day-name { font-weight: 700; font-size: 13px; }
+        .day-card .task-count { font-size: 11px; color: var(--text-secondary); }
+
+        .task-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            transition: all 0.3s;
+        }
+        .task-item:hover { border-color: var(--accent-blue); }
+        .task-info { flex: 1; min-width: 150px; }
+        .task-time { color: var(--accent-blue); font-weight: 700; }
+        .task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .question-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .question-item.new-question {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+        }
+        .answer-box {
+            background: rgba(124,77,255,0.1);
+            border-left: 4px solid var(--accent-purple);
+            padding: 10px 15px;
+            margin-top: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            text-align: center;
+        }
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+        }
+        .login-card h1 { margin-bottom: 10px; }
+        .login-card .subtitle { color: var(--text-secondary); margin-bottom: 25px; }
+        .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .role-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .role-btn:hover { border-color: var(--accent-purple); }
+        .role-btn.selected {
+            border-color: var(--accent-purple);
+            background: rgba(124,77,255,0.1);
+            box-shadow: var(--glow-purple);
+        }
+        .role-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
+
+        .aluno-list-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .grid-week { grid-template-columns: repeat(3, 1fr); }
+            .app-header { flex-direction: column; text-align: center; }
+            .task-item { flex-direction: column; align-items: stretch; }
+            .task-actions { justify-content: center; }
+        }
+        @media (max-width: 480px) {
+            .grid-week { grid-template-columns: repeat(2, 1fr); }
+            .btn { padding: 8px 14px; font-size: 12px; }
+        }
+
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mb-1 { margin-bottom: 10px; }
+        .mb-2 { margin-bottom: 20px; }
+        .mt-2 { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="app-root">
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="login-container fade-in-up">
+        <div class="login-card">
+            <span style="font-size:60px;">🎓</span>
+            <h1>StudyQuest</h1>
+            <p class="subtitle">Sistema de Assessoria Gamificada</p>
+            
+            <p style="margin-bottom:10px;font-weight:700;">Selecione seu perfil:</p>
+            <div class="role-selector">
+                <button class="role-btn" onclick="selectRole('adm')" id="role-adm-btn">
+                    <span class="emoji">👨‍🏫</span> Assessor
+                </button>
+                <button class="role-btn" onclick="selectRole('aluno')" id="role-aluno-btn">
+                    <span class="emoji">🎒</span> Aluno
+                </button>
+            </div>
+            
+            <input type="text" id="login-name" placeholder="Seu nome" style="margin-bottom:10px;">
+            <input type="password" id="login-password" placeholder="Senha" style="margin-bottom:20px;">
+            <button class="btn btn-primary" onclick="doLogin()" style="width:100%;justify-content:center;">
+                🚀 Entrar no StudyQuest
+            </button>
+            
+            <p style="margin-top:15px;font-size:12px;color:var(--text-secondary);">
+                💡 Demo: David (senha: david0724) ou Malu (senha: 300504)
+            </p>
+        </div>
+    </div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <div id="main-panel" class="hidden">
+        <header class="app-header fade-in-up">
+            <div class="logo-area">
+                <span class="logo-icon">🎓</span>
+                <span class="logo-text">StudyQuest</span>
+            </div>
+            <div class="user-info">
+                <span id="notification-area"></span>
+                <div class="user-avatar" id="user-avatar-display">?</div>
+                <span class="user-name" id="user-name-display"></span>
+                <span id="level-display-header"></span>
+                <button class="btn-logout" onclick="logout()">🚪 Sair</button>
+            </div>
+        </header>
+
+        <!-- VIEW ADM -->
+        <div id="adm-view" class="hidden fade-in-up">
+            <div class="grid-2">
+                <!-- CADASTRAR ALUNO -->
+                <div class="card">
+                    <div class="card-title">👤 Cadastrar Novo Aluno</div>
+                    <input type="text" id="new-aluno-name" class="mb-1" placeholder="Nome do aluno">
+                    <input type="password" id="new-aluno-password" class="mb-1" placeholder="Senha do aluno">
+                    <button class="btn btn-primary" onclick="admCadastrarAluno()" style="width:100%;justify-content:center;">
+                        ➕ Cadastrar Aluno
+                    </button>
+                </div>
+
+                <!-- MEUS ALUNOS -->
+                <div class="card">
+                    <div class="card-title">📋 Meus Alunos Vinculados</div>
+                    <div id="adm-alunos-list">
+                        <p style="color:var(--text-secondary);">Carregando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2 mt-2">
+                <!-- CADASTRAR TAREFAS -->
+                <div class="card">
+                    <div class="card-title">📅 Cadastrar Horário/Tarefa</div>
+                    <select id="adm-select-aluno" class="mb-1">
+                        <option value="">Selecione o aluno</option>
+                    </select>
+                    <select id="adm-select-day" class="mb-1">
+                        <option value="segunda">Segunda-feira</option>
+                        <option value="terca">Terça-feira</option>
+                        <option value="quarta">Quarta-feira</option>
+                        <option value="quinta">Quinta-feira</option>
+                        <option value="sexta">Sexta-feira</option>
+                    </select>
+                    <input type="time" id="adm-task-time" class="mb-1" placeholder="Horário">
+                    <input type="text" id="adm-task-name" class="mb-1" placeholder="Nome da matéria/tarefa">
+                    <button class="btn btn-primary" onclick="admAddTask()" style="width:100%;justify-content:center;">
+                        ➕ Adicionar Tarefa
+                    </button>
+                </div>
+
+                <!-- DÚVIDAS RECEBIDAS -->
+                <div class="card">
+                    <div class="card-title">
+                        💬 Dúvidas Recebidas
+                        <span id="adm-notif-badge" class="notification-badge hidden">0</span>
+                    </div>
+                    <div id="adm-questions-list">
+                        <p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISUALIZAR TAREFAS -->
+            <div class="card mt-2">
+                <div class="card-title">📌 Tarefas Cadastradas</div>
+                <select id="adm-filter-aluno" onchange="admRenderTasks()" class="mb-2">
+                    <option value="all">Todos os alunos</option>
+                </select>
+                <div id="adm-tasks-list"></div>
+            </div>
+        </div>
+
+        <!-- VIEW ALUNO -->
+        <div id="aluno-view" class="hidden fade-in-up">
+            <!-- XP e LEVEL -->
+            <div class="card">
+                <div class="level-display">
+                    <span style="font-size:30px;">⚡</span>
+                    <div>
+                        <strong>Nível <span class="level-number" id="aluno-level">1</span></strong>
+                        <span style="font-size:12px;color:var(--text-secondary);"> • <span id="aluno-xp">0</span>/100 XP</span>
+                    </div>
+                </div>
+                <div class="xp-bar-outer">
+                    <div class="xp-bar-inner" id="aluno-xp-bar" style="width:0%;"></div>
+                </div>
+                <div class="achievements-grid mt-2">
+                    <div class="achievement locked" id="ach-1" title="Completar 5 tarefas">
+                        <div class="achievement-icon">🏆</div>
+                        <small>5 Tarefas</small>
+                    </div>
+                    <div class="achievement locked" id="ach-2" title="Enviar 3 dúvidas">
+                        <div class="achievement-icon">💡</div>
+                        <small>3 Dúvidas</small>
+                    </div>
+                    <div class="achievement locked" id="ach-3" title="Sequência de 3 dias">
+                        <div class="achievement-icon">🔥</div>
+                        <small>3 Dias</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AGENDA DA SEMANA -->
+            <div class="card">
+                <div class="card-title">📅 Minha Agenda Semanal</div>
+                <div class="grid-week" id="week-overview"></div>
+            </div>
+
+            <!-- TAREFAS DO DIA -->
+            <div class="card">
+                <div class="card-title">
+                    📌 Tarefas de Hoje (<span id="today-name"></span>)
+                </div>
+                <div id="aluno-tasks-today">
+                    <p style="color:var(--text-secondary);">Nenhuma tarefa para hoje</p>
+                </div>
+            </div>
+
+            <!-- CAIXA DE DÚVIDAS -->
+            <div class="card">
+                <div class="card-title">💬 Minhas Dúvidas</div>
+                <textarea id="aluno-question-text" placeholder="Digite sua dúvida aqui..."></textarea>
+                <button class="btn btn-primary mt-1" onclick="alunoSendQuestion()" style="width:100%;justify-content:center;">
+                    📤 Enviar Dúvida
+                </button>
+                <div id="aluno-questions-list" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE JUSTIFICATIVA -->
+<div id="justify-modal" class="modal-overlay hidden">
+    <div class="modal fade-in-up">
+        <h3>📝 Justificativa</h3>
+        <p style="color:var(--text-secondary);margin-bottom:10px;">
+            Por que esta tarefa não foi realizada?
+        </p>
+        <textarea id="justify-text" placeholder="Sua justificativa (opcional)..."></textarea>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button class="btn btn-danger" onclick="confirmJustify()" style="flex:1;justify-content:center;">
+                Confirmar Não Feito
+            </button>
+            <button class="btn" onclick="closeJustifyModal()" 
+                    style="flex:1;justify-content:center;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ============================================================
+// 🗄️ BANCO DE DADOS (localStorage)
+// ============================================================
+const DB_KEY = 'studyquest_db_v2';
+
+function getDefaultDB() {
+    return {
+        users: [
+            { 
+                id: 'adm_david', 
+                name: 'David', 
+                password: 'david0724', 
+                role: 'adm', 
+                alunosVinculados: ['aluno_malu'] 
+            },
+            { 
+                id: 'aluno_malu', 
+                name: 'Malu', 
+                password: '300504', 
+                role: 'aluno', 
+                admId: 'adm_david', 
+                xp: 0, 
+                level: 1, 
+                achievements: [] 
+            }
+        ],
+        tasks: [],
+        questions: []
+    };
+}
+
+function loadDB() {
+    let db = localStorage.getItem(DB_KEY);
+    if (!db) {
+        db = getDefaultDB();
+        saveDB(db);
+        return db;
+    }
+    return JSON.parse(db);
+}
+
+function saveDB(db) {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
+let DB = loadDB();
+
+// ============================================================
+// 🔐 SESSÃO
+// ============================================================
+let currentUser = null;
+let selectedRole = null;
+let pendingJustifyTaskId = null;
+
+// ============================================================
+// 🎯 LOGIN
+// ============================================================
+function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role-adm-btn').classList.toggle('selected', role === 'adm');
+    document.getElementById('role-aluno-btn').classList.toggle('selected', role === 'aluno');
+}
+
+function doLogin() {
+    const name = document.getElementById('login-name').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    
+    if (!name || !password) {
+        showToast('⚠️ Preencha nome e senha!', 'warning');
+        return;
+    }
+    if (!selectedRole) {
+        showToast('⚠️ Selecione seu perfil!', 'warning');
+        return;
+    }
+    
+    const user = DB.users.find(u => 
+        u.name.toLowerCase() === name.toLowerCase() && 
+        u.password === password && 
+        u.role === selectedRole
+    );
+    
+    if (!user) {
+        showToast('❌ Usuário ou senha incorretos!', 'error');
+        return;
+    }
+    
+    currentUser = user;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-panel').classList.remove('hidden');
+    
+    document.getElementById('adm-view').classList.toggle('hidden', user.role !== 'adm');
+    document.getElementById('aluno-view').classList.toggle('hidden', user.role !== 'aluno');
+    
+    document.getElementById('user-avatar-display').textContent = user.name.charAt(0).toUpperCase();
+    document.getElementById('user-name-display').textContent = user.name;
+    
+    if (user.role === 'adm') {
+        setupAdmView();
+    } else {
+        setupAlunoView();
+    }
+    
+    renderAll();
+    showToast(`✅ Bem-vindo(a), ${user.name}!`, 'success');
+}
+
+function logout() {
+    currentUser = null;
+    selectedRole = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('main-panel').classList.add('hidden');
+    document.getElementById('adm-view').classList.add('hidden');
+    document.getElementById('aluno-view').classList.add('hidden');
+    document.getElementById('login-name').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('role-adm-btn').classList.remove('selected');
+    document.getElementById('role-aluno-btn').classList.remove('selected');
+}
+
+// ============================================================
+// 👨‍🏫 FUNÇÕES DO ADM
+// ============================================================
+function setupAdmView() {
+    updateAdmAlunosList();
+    updateAdmSelects();
+}
+
+function updateAdmAlunosList() {
+    const container = document.getElementById('adm-alunos-list');
+    const alunosVinculados = DB.users.filter(u => 
+        u.role === 'aluno' && currentUser.alunosVinculados.includes(u.id)
+    );
+    
+    if (alunosVinculados.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum aluno vinculado</p>';
+        return;
+    }
+    
+    container.innerHTML = alunosVinculados.map(a => `
+        <div class="aluno-list-item">
+            <span>🎒 <strong>${a.name}</strong></span>
+            <button class="btn btn-small btn-danger" onclick="admRemoverAluno('${a.id}')">🗑️ Remover</button>
+        </div>
+    `).join('');
+}
+
+function updateAdmSelects() {
+    const alunosVinculados = DB.users.filter(u => 
+        u.role === 'aluno' && currentUser.alunosVinculados.includes(u.id)
+    );
+    
+    // Select para cadastrar tarefa
+    const selectAluno = document.getElementById('adm-select-aluno');
+    selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+    alunosVinculados.forEach(a => {
+        selectAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+    });
+    
+    // Select para filtrar tarefas
+    const filterAluno = document.getElementById('adm-filter-aluno');
+    filterAluno.innerHTML = '<option value="all">Todos os alunos</option>';
+    alunosVinculados.forEach(a => {
+        filterAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+    });
+}
+
+function admCadastrarAluno() {
+    const name = document.getElementById('new-aluno-name').value.trim();
+    const password = document.getElementById('new-aluno-password').value.trim();
+    
+    if (!name || !password) {
+        showToast('⚠️ Preencha nome e senha do aluno!', 'warning');
+        return;
+    }
+    
+    // Verificar se já existe
+    const exists = DB.users.find(u => u.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+        showToast('⚠️ Já existe um usuário com este nome!', 'warning');
+        return;
+    }
+    
+    const newAlunoId = 'aluno_' + Date.now();
+    const newAluno = {
+        id: newAlunoId,
+        name: name,
+        password: password,
+        role: 'aluno',
+        admId: currentUser.id,
+        xp: 0,
+        level: 1,
+        achievements: []
+    };
+    
+    DB.users.push(newAluno);
+    currentUser.alunosVinculados.push(newAlunoId);
+    
+    // Atualizar o ADM no DB
+    const admInDB = DB.users.find(u => u.id === currentUser.id);
+    if (admInDB) admInDB.alunosVinculados = currentUser.alunosVinculados;
+    
+    saveDB(DB);
+    
+    // Limpar campos
+    document.getElementById('new-aluno-name').value = '';
+    document.getElementById('new-aluno-password').value = '';
+    
+    updateAdmAlunosList();
+    updateAdmSelects();
+    renderAll();
+    showToast(`✅ Aluno "${name}" cadastrado com sucesso!`, 'success');
+}
+
+function admRemoverAluno(alunoId) {
+    const aluno = DB.users.find(u => u.id === alunoId);
+    if (!aluno) return;
+    
+    if (!confirm(`Tem certeza que deseja remover o aluno "${aluno.name}"? Esta ação não pode ser desfeita.`)) return;
+    
+    // Remover vínculo
+    currentUser.alunosVinculados = currentUser.alunosVinculados.filter(id => id !== alunoId);
+    const admInDB = DB.users.find(u => u.id === currentUser.id);
+    if (admInDB) admInDB.alunosVinculados = currentUser.alunosVinculados;
+    
+    // Remover aluno
+    DB.users = DB.users.filter(u => u.id !== alunoId);
+    
+    // Remover tarefas e dúvidas do aluno
+    DB.tasks = DB.tasks.filter(t => t.alunoId !== alunoId);
+    DB.questions = DB.questions.filter(q => q.alunoId !== alunoId);
+    
+    saveDB(DB);
+    updateAdmAlunosList();
+    updateAdmSelects();
+    renderAll();
+    showToast(`🗑️ Aluno "${aluno.name}" removido`, 'info');
+}
+
+function admAddTask() {
+    const alunoId = document.getElementById('adm-select-aluno').value;
+    const day = document.getElementById('adm-select-day').value;
+    const time = document.getElementById('adm-task-time').value;
+    const name = document.getElementById('adm-task-name').value.trim();
+    
+    if (!alunoId || !time || !name) {
+        showToast('⚠️ Preencha todos os campos!', 'warning');
+        return;
+    }
+    
+    const newTask = {
+        id: Date.now(),
+        alunoId,
+        day,
+        time,
+        name,
+        status: 'Pendente',
+        justification: ''
+    };
+    
+    DB.tasks.push(newTask);
+    saveDB(DB);
+    renderAll();
+    showToast('✅ Tarefa cadastrada com sucesso!', 'success');
+    
+    document.getElementById('adm-task-time').value = '';
+    document.getElementById('adm-task-name').value = '';
+}
+
+function admRenderTasks() {
+    const filterId = document.getElementById('adm-filter-aluno').value;
+    const container = document.getElementById('adm-tasks-list');
+    
+    let tasksToShow = DB.tasks.filter(t => {
+        if (filterId === 'all') {
+            return currentUser.alunosVinculados.includes(t.alunoId);
+        }
+        return t.alunoId === filterId;
+    });
+    
+    if (tasksToShow.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma tarefa encontrada</p>';
+        return;
+    }
+    
+    const dayNames = { segunda:'Seg', terca:'Ter', quarta:'Qua', quinta:'Qui', sexta:'Sex' };
+    const statusBadges = {
+        'Pendente': 'badge-pending',
+        'Em Andamento': 'badge-doing',
+        'Realizado': 'badge-done',
+        'Não Feito': 'badge-notdone'
+    };
+    
+    container.innerHTML = tasksToShow.map(t => {
+        const aluno = DB.users.find(u => u.id === t.alunoId);
+        return `
+            <div class="task-item slide-in">
+                <div class="task-info">
+                    <strong>${aluno ? aluno.name : 'Aluno'}</strong> • 
+                    <span style="color:var(--text-secondary);">${dayNames[t.day]}</span>
+                    <span class="task-time">${t.time}</span> - ${t.name}
+                    <br>
+                    <span class="badge ${statusBadges[t.status]}">${t.status}</span>
+                    ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
+                </div>
+                <button class="btn btn-small btn-danger" onclick="admDeleteTask(${t.id})">🗑️</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function admDeleteTask(taskId) {
+    if (!confirm('Deseja realmente excluir esta tarefa?')) return;
+    DB.tasks = DB.tasks.filter(t => t.id !== taskId);
+    saveDB(DB);
+    renderAll();
+    showToast('🗑️ Tarefa excluída', 'info');
+}
+
+function admRenderQuestions() {
+    const container = document.getElementById('adm-questions-list');
+    const badge = document.getElementById('adm-notif-badge');
+    
+    const questions = DB.questions.filter(q => 
+        currentUser.alunosVinculados.includes(q.alunoId)
+    );
+    
+    const newCount = questions.filter(q => q.status === 'Nova').length;
+    
+    if (newCount > 0) {
+        badge.classList.remove('hidden');
+        badge.textContent = newCount;
+    } else {
+        badge.classList.add('hidden');
+    }
+    
+    if (questions.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>';
+        return;
+    }
+    
+    container.innerHTML = questions.sort((a,b) => b.id - a.id).map(q => {
+        const aluno = DB.users.find(u => u.id === q.alunoId);
+        return `
+            <div class="question-item ${q.status === 'Nova' ? 'new-question' : ''}">
+                <strong>${aluno ? aluno.name : 'Aluno'}</strong>
+                <span class="badge ${q.status === 'Nova' ? 'badge-new' : 'badge-done'}">${q.status}</span>
+                <p style="margin:8px 0;">${q.text}</p>
+                ${q.answer ? `<div class="answer-box">✅ ${q.answer}</div>` : ''}
+                ${q.status !== 'Respondida' ? `
+                    <button class="btn btn-small btn-primary mt-1" onclick="admAnswerQuestion(${q.id})">
+                        ✏️ Responder
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function admAnswerQuestion(qId) {
+    const answer = prompt('Digite a resposta:');
+    if (!answer || !answer.trim()) return;
+    
+    const question = DB.questions.find(q => q.id === qId);
+    if (question) {
+        question.answer = answer.trim();
+        question.status = 'Respondida';
+        saveDB(DB);
+        renderAll();
+        showToast('✅ Resposta enviada!', 'success');
+    }
+}
+
+// ============================================================
+// 🎒 FUNÇÕES DO ALUNO
+// ============================================================
+function setupAlunoView() {
+    updateAlunoXP();
+    updateAchievements();
+}
+
+function getAlunoTasks() {
+    return DB.tasks.filter(t => t.alunoId === currentUser.id);
+}
+
+function getAlunoQuestions() {
+    return DB.questions.filter(q => q.alunoId === currentUser.id);
+}
+
+function updateAlunoXP() {
+    const xp = currentUser.xp || 0;
+    const level = Math.floor(xp / 100) + 1;
+    const xpInLevel = xp % 100;
+    
+    currentUser.level = level;
+    
+    document.getElementById('aluno-level').textContent = level;
+    document.getElementById('aluno-xp').textContent = xpInLevel;
+    document.getElementById('aluno-xp-bar').style.width = xpInLevel + '%';
+    document.getElementById('level-display-header').innerHTML = `
+        <span style="font-size:12px;">Nível</span>
+        <span class="level-number">${level}</span>
+    `;
+}
+
+function gainXP(amount) {
+    currentUser.xp = (currentUser.xp || 0) + amount;
+    const userInDB = DB.users.find(u => u.id === currentUser.id);
+    if (userInDB) {
+        userInDB.xp = currentUser.xp;
+        userInDB.level = Math.floor(currentUser.xp / 100) + 1;
+    }
+    saveDB(DB);
+    updateAlunoXP();
+    updateAchievements();
+    
+    const xpDisplay = document.getElementById('aluno-xp');
+    xpDisplay.style.animation = 'none';
+    setTimeout(() => { xpDisplay.style.animation = 'xpGain 0.6s ease-out'; }, 10);
+}
+
+function updateAchievements() {
+    const tasks = getAlunoTasks();
+    const questions = getAlunoQuestions();
+    const doneTasks = tasks.filter(t => t.status === 'Realizado').length;
+    const sentQuestions = questions.length;
+    
+    const achievs = currentUser.achievements || [];
+    
+    if (doneTasks >= 5 && !achievs.includes('ach1')) {
+        achievs.push('ach1');
+        showToast('🏆 Conquista desbloqueada: Mestre das Tarefas!', 'success');
+    }
+    if (sentQuestions >= 3 && !achievs.includes('ach2')) {
+        achievs.push('ach2');
+        showToast('💡 Conquista desbloqueada: Curioso!', 'success');
+    }
+    
+    currentUser.achievements = achievs;
+    const userInDB = DB.users.find(u => u.id === currentUser.id);
+    if (userInDB) userInDB.achievements = achievs;
+    saveDB(DB);
+    
+    document.getElementById('ach-1').classList.toggle('unlocked', achievs.includes('ach1'));
+    document.getElementById('ach-1').classList.toggle('locked', !achievs.includes('ach1'));
+    document.getElementById('ach-2').classList.toggle('unlocked', achievs.includes('ach2'));
+    document.getElementById('ach-2').classList.toggle('locked', !achievs.includes('ach2'));
+}
+
+function renderWeekOverview() {
+    const container = document.getElementById('week-overview');
+    const days = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
+    const dayNames = { segunda:'Seg', terca:'Ter', quarta:'Qua', quinta:'Qui', sexta:'Sex' };
+    const today = getTodayDay();
+    
+    document.getElementById('today-name').textContent = 
+        dayNames[today] ? dayNames[today] + '-feira' : 'Hoje';
+    
+    const tasks = getAlunoTasks();
+    
+    container.innerHTML = days.map(day => {
+        const dayTasks = tasks.filter(t => t.day === day);
+        const isToday = day === today;
+        const doneCount = dayTasks.filter(t => t.status === 'Realizado').length;
+        
+        return `
+            <div class="day-card ${isToday ? 'today' : ''}">
+                <span class="day-name">${dayNames[day]}</span>
+                <span class="task-count">
+                    ${doneCount}/${dayTasks.length} ✅
+                </span>
+                ${isToday ? '<span style="font-size:10px;color:var(--accent-purple);">HOJE</span>' : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function getTodayDay() {
+    const dayNum = new Date().getDay();
+    const map = { 1:'segunda', 2:'terca', 3:'quarta', 4:'quinta', 5:'sexta' };
+    return map[dayNum] || 'segunda';
+}
+
+function renderAlunoTasksToday() {
+    const container = document.getElementById('aluno-tasks-today');
+    const today = getTodayDay();
+    const tasks = getAlunoTasks().filter(t => t.day === today);
+    
+    if (tasks.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa para hoje!</p>';
+        return;
+    }
+    
+    const statusBadges = {
+        'Pendente': 'badge-pending',
+        'Em Andamento': 'badge-doing',
+        'Realizado': 'badge-done',
+        'Não Feito': 'badge-notdone'
+    };
+    
+    container.innerHTML = tasks.map(t => `
+        <div class="task-item slide-in">
+            <div class="task-info">
+                <span class="task-time">🕐 ${t.time}</span>
+                <strong>${t.name}</strong>
+                <br>
+                <span class="badge ${statusBadges[t.status]}">${t.status}</span>
+                ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
+            </div>
+            <div class="task-actions">
+                <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')">
+                    ✅
+                </button>
+                <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')">
+                    🔄
+                </button>
+                <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})">
+                    ❌
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function alunoUpdateTaskStatus(taskId, newStatus) {
+    const task = DB.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    const oldStatus = task.status;
+    task.status = newStatus;
+    if (newStatus !== 'Não Feito') task.justification = '';
+    
+    saveDB(DB);
+    
+    if (newStatus === 'Realizado' && oldStatus !== 'Realizado') {
+        gainXP(15);
+        showToast('+15 XP! ⚡', 'success');
+    } else if (newStatus === 'Em Andamento' && oldStatus === 'Pendente') {
+        gainXP(5);
+    }
+    
+    renderAll();
+}
+
+function alunoMarkNotDone(taskId) {
+    pendingJustifyTaskId = taskId;
+    document.getElementById('justify-text').value = '';
+    document.getElementById('justify-modal').classList.remove('hidden');
+}
+
+function confirmJustify() {
+    if (!pendingJustifyTaskId) return;
+    
+    const justification = document.getElementById('justify-text').value.trim();
+    const task = DB.tasks.find(t => t.id === pendingJustifyTaskId);
+    if (task) {
+        task.status = 'Não Feito';
+        task.justification = justification || '(sem justificativa)';
+        saveDB(DB);
+        gainXP(2);
+        showToast('📝 Status atualizado! Notificação enviada ao assessor', 'info');
+    }
+    
+    closeJustifyModal();
+    renderAll();
+}
+
+function closeJustifyModal() {
+    document.getElementById('justify-modal').classList.add('hidden');
+    pendingJustifyTaskId = null;
+}
+
+function alunoSendQuestion() {
+    const text = document.getElementById('aluno-question-text').value.trim();
+    if (!text) {
+        showToast('⚠️ Digite sua dúvida!', 'warning');
+        return;
+    }
+    
+    const newQuestion = {
+        id: Date.now(),
+        alunoId: currentUser.id,
+        text,
+        answer: '',
+        status: 'Nova'
+    };
+    
+    DB.questions.push(newQuestion);
+    saveDB(DB);
+    gainXP(10);
+    
+    document.getElementById('aluno-question-text').value = '';
+    renderAll();
+    showToast('📤 Dúvida enviada! +10 XP', 'success');
+}
+
+function renderAlunoQuestions() {
+    const container = document.getElementById('aluno-questions-list');
+    const questions = getAlunoQuestions();
+    
+    if (questions.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma dúvida enviada ainda</p>';
+        return;
+    }
+    
+    container.innerHTML = questions.sort((a,b) => b.id - a.id).map(q => `
+        <div class="question-item ${q.status === 'Respondida' ? '' : 'new-question'}">
+            <strong>📝 Sua dúvida:</strong>
+            <span class="badge ${q.status === 'Respondida' ? 'badge-done' : 'badge-pending'}">${q.status}</span>
+            <p style="margin:8px 0;">${q.text}</p>
+            ${q.answer ? `<div class="answer-box">✅ <strong>Resposta do assessor:</strong> ${q.answer}</div>` : 
+            '<p style="color:var(--text-secondary);font-size:12px;">⏳ Aguardando resposta...</p>'}
+        </div>
+    `).join('');
+}
+
+// ============================================================
+// 🎨 RENDERIZAÇÃO
+// ============================================================
+function renderAll() {
+    if (!currentUser) return;
+    
+    if (currentUser.role === 'adm') {
+        admRenderTasks();
+        admRenderQuestions();
+        updateAdmAlunosList();
+        updateAdmSelects();
+    } else {
+        renderWeekOverview();
+        renderAlunoTasksToday();
+        renderAlunoQuestions();
+        updateAlunoXP();
+        updateAchievements();
+    }
+}
+
+// ============================================================
+// 🔔 TOAST
+// ============================================================
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    
+    const colors = {
+        success: 'var(--accent-green)',
+        error: 'var(--accent-red)',
+        warning: 'var(--accent-orange)',
+        info: 'var(--accent-blue)'
+    };
+    toast.style.borderColor = colors[type] || colors.info;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// ============================================================
+// 🔄 ATUALIZAÇÃO PERIÓDICA
+// ============================================================
+setInterval(() => {
+    if (currentUser) {
+        DB = loadDB();
+        const refreshed = DB.users.find(u => u.id === currentUser.id);
+        if (refreshed) currentUser = refreshed;
+        renderAll();
+    }
+}, 5000);
+
+// ============================================================
+// 🚀 INICIALIZAÇÃO
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎓 StudyQuest inicializado!');
+    console.log('👨‍🏫 Login ADM: David / david0724');
+    console.log('🎒 Login Aluno: Malu / 300504');
+});
+
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !currentUser) {
+        doLogin();
+    }
+});
+</script>
+
+</body>
+</html>
