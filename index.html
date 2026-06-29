@@ -2145,20 +2145,16 @@ async function updateTaskFromSchedule(taskId, newStatus) {
     try {
         isUpdating = true;
         
-        // Limpar o ID (remover decimais e converter para número)
-        const taskIdClean = String(taskId).split('.')[0];
-        const taskIdNum = Number(taskIdClean);
+        // Manter o ID como string para envio
+        const taskIdStr = String(taskId).split('.')[0];
         
-        console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
+        console.log(`🔄 Atualizando tarefa - ID: ${taskIdStr}`);
         console.log(`📝 Novo status: "${newStatus}"`);
-        
-        if (isNaN(taskIdNum)) {
-            throw new Error('ID da tarefa inválido');
-        }
         
         showToast('⏳ Atualizando status...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
+        // Enviar o ID como string na URL
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2211,7 +2207,6 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         isUpdating = false;
     }
 }
-
 // ============================================================
 // 📝 FUNÇÕES PARA NÃO FEITO E RECUPERAR (CORRIGIDAS)
 // ============================================================
