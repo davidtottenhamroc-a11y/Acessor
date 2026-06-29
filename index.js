@@ -144,16 +144,40 @@ app.get('/api/users/alunos/:admId', async (req, res) => {
   }
 });
 
+// Buscar dados do aluno
+app.get('/api/users/aluno/:alunoId', async (req, res) => {
+  const { alunoId } = req.params;
+
+  try {
+    const result = await runQuery(
+      `
+      MATCH (u:User {id: $alunoId})
+      RETURN u
+      `,
+      { alunoId }
+    );
+
+    if (result.records.length === 0) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
+
+    const aluno = result.records[0].get('u').properties;
+    res.json(aluno);
+  } catch (error) {
+    console.error('Erro ao buscar aluno:', error);
+    res.status(500).json({ error: 'Erro ao buscar aluno' });
+  }
+});
+
 // ============ TAREFAS ============
 // Criar tarefa
 app.post('/api/tasks', async (req, res) => {
-  const { alunoId, day, timeStart, timeEnd, name, admId } = req.body;
+  const { alunoId, day, timeStart, timeEnd, name } = req.body;
 
   try {
     const taskId = Date.now();
     const timestamp = new Date().toLocaleString('pt-BR');
     
-    // Buscar nome do aluno
     const alunoResult = await runQuery(
       'MATCH (u:User {id: $id}) RETURN u.name',
       { id: alunoId }
@@ -180,7 +204,6 @@ app.post('/api/tasks', async (req, res) => {
 
     const task = result.records[0].get('t').properties;
     
-    // Criar log
     await runQuery(
       `
       MATCH (aluno:User {id: $alunoId})
@@ -268,7 +291,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { status, justification, alunoId } = req.body;
 
   try {
-    // Buscar status antigo
     const oldResult = await runQuery(
       'MATCH (t:Task {id: $taskId}) RETURN t.status AS oldStatus, t.name AS taskName',
       { taskId }
@@ -281,7 +303,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     const oldStatus = oldResult.records[0].get('oldStatus');
     const taskName = oldResult.records[0].get('taskName');
     
-    // Atualizar status
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
@@ -292,7 +313,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       { taskId, status, justification: justification || '' }
     );
     
-    // Criar log
     const timestamp = new Date().toLocaleString('pt-BR');
     const alunoResult = await runQuery(
       'MATCH (u:User {id: $id}) RETURN u.name',
@@ -329,7 +349,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       }
     );
     
-    // Atualizar XP do aluno
     if (status === 'Realizado' && oldStatus !== 'Realizado') {
       await runQuery(
         `
@@ -345,6 +364,26 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
         `
         MATCH (u:User {id: $alunoId})
         SET u.xp = (u.xp + 5)
+        SET u.level = (toInteger(u.xp / 100) + 1)
+        RETURN u
+        `,
+        { alunoId }
+      );
+    } else if (status === 'Não Feito' && oldStatus !== 'Não Feito') {
+      await runQuery(
+        `
+        MATCH (u:User {id: $alunoId})
+        SET u.xp = (u.xp + 2)
+        SET u.level = (toInteger(u.xp / 100) + 1)
+        RETURN u
+        `,
+        { alunoId }
+      );
+    } else if (status === 'Realizado' && oldStatus === 'Não Feito') {
+      await runQuery(
+        `
+        MATCH (u:User {id: $alunoId})
+        SET u.xp = (u.xp + 25)
         SET u.level = (toInteger(u.xp / 100) + 1)
         RETURN u
         `,
@@ -405,7 +444,6 @@ app.post('/api/questions', async (req, res) => {
 
     const question = result.records[0].get('q').properties;
     
-    // Adicionar XP
     await runQuery(
       `
       MATCH (u:User {id: $alunoId})
@@ -524,7 +562,6 @@ app.post('/api/achievements/check', async (req, res) => {
   const { alunoId } = req.body;
 
   try {
-    // Buscar dados do aluno
     const result = await runQuery(
       `
       MATCH (aluno:User {id: $alunoId})
@@ -548,18 +585,22 @@ app.post('/api/achievements/check', async (req, res) => {
     
     const achievs = aluno.achievements || [];
     let changed = false;
+    let newAchievements = [];
     
     if (doneTasks >= 5 && !achievs.includes('ach1')) {
       achievs.push('ach1');
       changed = true;
+      newAchievements.push('🏆 Mestre das Tarefas');
     }
     if (totalQuestions >= 3 && !achievs.includes('ach2')) {
       achievs.push('ach2');
       changed = true;
+      newAchievements.push('💡 Curioso');
     }
     if (recoveredTasks >= 1 && !achievs.includes('ach3')) {
       achievs.push('ach3');
       changed = true;
+      newAchievements.push('🔄 Segunda Chance');
     }
     
     if (changed) {
@@ -573,7 +614,11 @@ app.post('/api/achievements/check', async (req, res) => {
       );
     }
     
-    res.json({ achievements: achievs, changed });
+    res.json({ 
+      achievements: achievs, 
+      changed,
+      newAchievements 
+    });
   } catch (error) {
     console.error('Erro ao verificar conquistas:', error);
     res.status(500).json({ error: 'Erro ao verificar conquistas' });
@@ -583,7 +628,6 @@ app.post('/api/achievements/check', async (req, res) => {
 // ============ INICIALIZAÇÃO DO BANCO ============
 async function initDatabase() {
   try {
-    // Criar constraints
     await runQuery(`
       CREATE CONSTRAINT user_id_unique IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE
     `);
@@ -597,7 +641,6 @@ async function initDatabase() {
       CREATE CONSTRAINT log_id_unique IF NOT EXISTS FOR (l:Log) REQUIRE l.id IS UNIQUE
     `);
 
-    // Verificar se há usuários
     const result = await runQuery('MATCH (u:User) RETURN COUNT(u) AS count');
     const count = result.records[0].get('count').toInt();
     
@@ -618,9 +661,12 @@ async function initDatabase() {
 // Inicializar banco
 initDatabase();
 
-// Rota principal para servir o frontend
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+// Servir arquivos estáticos (HTML)
+app.use(express.static('.'));
+
+// Rota para servir o index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Exportar para Vercel
