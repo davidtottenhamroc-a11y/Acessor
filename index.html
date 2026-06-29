@@ -174,6 +174,11 @@
             padding: 6px 14px;
             font-size: 12px;
         }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
 
         .card {
             background: var(--bg-card);
@@ -477,6 +482,20 @@
         .mt-1 { margin-top: 10px; }
         .mt-2 { margin-top: 20px; }
 
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .grid-week { grid-template-columns: repeat(3, 1fr); }
@@ -707,7 +726,7 @@
 // ============================================================
 // 🌐 CONFIGURAÇÃO DA API
 // ============================================================
-const API_URL = window.location.origin + '/api';
+const API_URL = '/api';
 
 // ============================================================
 // 🔐 SESSÃO
@@ -740,6 +759,8 @@ async function doLogin() {
     }
     
     try {
+        showToast('⏳ Fazendo login...', 'info');
+        
         const response = await fetch(`${API_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -765,12 +786,12 @@ async function doLogin() {
         document.getElementById('user-name-display').textContent = currentUser.name;
         
         if (currentUser.role === 'adm') {
-            setupAdmView();
+            await setupAdmView();
         } else {
-            setupAlunoView();
+            await setupAlunoView();
         }
         
-        renderAll();
+        await renderAll();
         showToast(`✅ Bem-vindo(a), ${currentUser.name}!`, 'success');
     } catch (error) {
         console.error('Erro no login:', error);
@@ -790,6 +811,7 @@ function logout() {
     document.getElementById('login-password').value = '';
     document.getElementById('role-adm-btn').classList.remove('selected');
     document.getElementById('role-aluno-btn').classList.remove('selected');
+    showToast('👋 Até logo!', 'info');
 }
 
 // ============================================================
@@ -855,6 +877,8 @@ async function admCadastrarAluno() {
     }
     
     try {
+        showToast('⏳ Cadastrando aluno...', 'info');
+        
         const response = await fetch(`${API_URL}/users/aluno`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -872,7 +896,7 @@ async function admCadastrarAluno() {
         
         await updateAdmAlunosList();
         await updateAdmSelects();
-        renderAll();
+        await renderAll();
         showToast(`✅ Aluno "${name}" cadastrado com sucesso!`, 'success');
     } catch (error) {
         console.error('Erro ao cadastrar aluno:', error);
@@ -892,7 +916,7 @@ async function admRemoverAluno(alunoId) {
         
         await updateAdmAlunosList();
         await updateAdmSelects();
-        renderAll();
+        await renderAll();
         showToast('🗑️ Aluno removido', 'info');
     } catch (error) {
         console.error('Erro ao remover aluno:', error);
@@ -918,6 +942,8 @@ async function admAddTask() {
     }
     
     try {
+        showToast('⏳ Criando tarefa...', 'info');
+        
         await fetch(`${API_URL}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -928,7 +954,7 @@ async function admAddTask() {
         document.getElementById('adm-task-time-end').value = '';
         document.getElementById('adm-task-name').value = '';
         
-        renderAll();
+        await renderAll();
         showToast('✅ Tarefa cadastrada com sucesso!', 'success');
     } catch (error) {
         console.error('Erro ao criar tarefa:', error);
@@ -991,7 +1017,7 @@ async function admDeleteTask(taskId) {
     
     try {
         await fetch(`${API_URL}/tasks/${taskId}`, { method: 'DELETE' });
-        renderAll();
+        await renderAll();
         showToast('🗑️ Tarefa excluída', 'info');
     } catch (error) {
         console.error('Erro ao deletar tarefa:', error);
@@ -1051,7 +1077,7 @@ async function admAnswerQuestion(qId) {
             body: JSON.stringify({ answer: answer.trim() })
         });
         
-        renderAll();
+        await renderAll();
         showToast('✅ Resposta enviada!', 'success');
     } catch (error) {
         console.error('Erro ao responder:', error);
@@ -1114,13 +1140,13 @@ async function setupAlunoView() {
 
 async function loadAlunoData() {
     try {
-        const response = await fetch(`${API_URL}/users/alunos/${currentUser.id}`);
-        const alunos = await response.json();
-        const aluno = alunos.find(a => a.id === currentUser.id);
+        const response = await fetch(`${API_URL}/users/aluno/${currentUser.id}`);
+        const aluno = await response.json();
         if (aluno) {
             currentUser.xp = aluno.xp || 0;
             currentUser.level = aluno.level || 1;
             currentUser.achievements = aluno.achievements || [];
+            console.log('📊 Dados do aluno carregados:', currentUser);
         }
     } catch (error) {
         console.error('Erro ao carregar dados do aluno:', error);
@@ -1175,6 +1201,7 @@ async function renderWeekOverview() {
     try {
         const response = await fetch(`${API_URL}/tasks/aluno/${currentUser.id}`);
         const tasks = await response.json();
+        console.log('📋 Tarefas carregadas:', tasks);
         
         container.innerHTML = days.map(day => {
             const dayTasks = tasks.filter(t => t.day === day);
@@ -1245,22 +1272,30 @@ async function renderAlunoTasksByDay(day) {
         tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
         
         container.innerHTML = tasks.map(t => `
-            <div class="task-item slide-in">
+            <div class="task-item slide-in" id="task-${t.id}">
                 <div class="task-info">
                     <span class="task-time">🕐 ${t.timeStart} - ${t.timeEnd}</span>
                     <strong>${t.name}</strong>
                     <br>
-                    <span class="badge ${statusBadges[t.status]}">${t.status}</span>
+                    <span class="badge ${statusBadges[t.status]}" id="status-badge-${t.id}">${t.status}</span>
                     ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
                     ${t.status === 'Não Feito' ? '<br><small style="color:var(--accent-orange);">⚠️ Requer justificativa para alterar</small>' : ''}
                 </div>
                 <div class="task-actions">
                     ${t.status !== 'Não Feito' ? `
-                        <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')">✅</button>
-                        <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')">🔄</button>
-                        <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})">❌</button>
+                        <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')" id="btn-done-${t.id}">
+                            ✅
+                        </button>
+                        <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')" id="btn-doing-${t.id}">
+                            🔄
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})" id="btn-notdone-${t.id}">
+                            ❌
+                        </button>
                     ` : `
-                        <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${t.id})">🔄 Recuperar</button>
+                        <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${t.id})" id="btn-recover-${t.id}">
+                            🔄 Recuperar
+                        </button>
                     `}
                 </div>
             </div>
@@ -1271,9 +1306,21 @@ async function renderAlunoTasksByDay(day) {
     }
 }
 
+// ============================================================
+// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS
+// ============================================================
+
 async function alunoUpdateTaskStatus(taskId, newStatus) {
     try {
-        await fetch(`${API_URL}/tasks/${taskId}/status`, {
+        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskId} para "${newStatus}"`);
+        
+        // Desabilitar botões para evitar cliques duplos
+        const buttons = document.querySelectorAll(`#task-${taskId} .btn`);
+        buttons.forEach(btn => btn.disabled = true);
+        
+        showToast('⏳ Atualizando status...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -1283,16 +1330,84 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
             })
         });
         
-        await loadAlunoData();
-        updateAlunoXP();
-        await checkAchievements();
-        renderAll();
-        showToast('✅ Status atualizado!', 'success');
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar status');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Resposta do servidor:', data);
+        
+        if (data.success) {
+            // Atualizar o badge de status visualmente
+            const badge = document.getElementById(`status-badge-${taskId}`);
+            if (badge) {
+                const statusClasses = {
+                    'Pendente': 'badge-pending',
+                    'Em Andamento': 'badge-doing',
+                    'Realizado': 'badge-done',
+                    'Não Feito': 'badge-notdone'
+                };
+                badge.className = `badge ${statusClasses[newStatus] || 'badge-pending'}`;
+                badge.textContent = newStatus;
+            }
+            
+            // Atualizar os botões conforme o novo status
+            const taskItem = document.getElementById(`task-${taskId}`);
+            if (taskItem) {
+                const actionsDiv = taskItem.querySelector('.task-actions');
+                if (newStatus === 'Não Feito') {
+                    actionsDiv.innerHTML = `
+                        <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${taskId})" id="btn-recover-${taskId}">
+                            🔄 Recuperar
+                        </button>
+                    `;
+                } else {
+                    actionsDiv.innerHTML = `
+                        <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${taskId}, 'Realizado')" id="btn-done-${taskId}">
+                            ✅
+                        </button>
+                        <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${taskId}, 'Em Andamento')" id="btn-doing-${taskId}">
+                            🔄
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${taskId})" id="btn-notdone-${taskId}">
+                            ❌
+                        </button>
+                    `;
+                }
+            }
+            
+            // Recarregar dados do usuário
+            await loadAlunoData();
+            updateAlunoXP();
+            await checkAchievements();
+            
+            // Recarregar a lista de tarefas para garantir consistência
+            await renderAlunoTasksByDay(selectedDay);
+            
+            // Mostrar toast com XP ganho
+            if (data.xpGanho > 0) {
+                showToast(`✅ Status atualizado! +${data.xpGanho} XP ⚡`, 'success');
+            } else {
+                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
+            }
+        } else {
+            throw new Error('Erro ao atualizar status');
+        }
+        
     } catch (error) {
-        console.error('Erro ao atualizar status:', error);
-        showToast('❌ Erro ao atualizar status', 'error');
+        console.error('❌ Erro ao atualizar status:', error);
+        showToast('❌ ' + error.message, 'error');
+        
+        // Reabilitar botões
+        const buttons = document.querySelectorAll(`#task-${taskId} .btn`);
+        buttons.forEach(btn => btn.disabled = false);
     }
 }
+
+// ============================================================
+// FUNÇÃO PARA MARCAR COMO NÃO FEITO
+// ============================================================
 
 function alunoMarkNotDone(taskId) {
     pendingTaskId = taskId;
@@ -1310,23 +1425,37 @@ async function confirmNotDone() {
     }
     
     try {
-        await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
+        console.log(`❌ Marcando tarefa ${pendingTaskId} como Não Feito`);
+        
+        showToast('⏳ Atualizando...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 status: 'Não Feito', 
-                justification,
+                justification: justification,
                 alunoId: currentUser.id 
             })
         });
         
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar status');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Tarefa marcada como Não Feito:', data);
+        
         await loadAlunoData();
         updateAlunoXP();
-        renderAll();
-        showToast('📝 Status atualizado!', 'info');
+        await renderAlunoTasksByDay(selectedDay);
+        
+        showToast('📝 Tarefa marcada como Não Feito', 'info');
+        
     } catch (error) {
-        console.error('Erro ao marcar como não feito:', error);
-        showToast('❌ Erro ao atualizar', 'error');
+        console.error('❌ Erro ao marcar como não feito:', error);
+        showToast('❌ ' + error.message, 'error');
     }
     
     closeJustifyModal();
@@ -1336,6 +1465,10 @@ function closeJustifyModal() {
     document.getElementById('justify-modal').classList.add('hidden');
     pendingTaskId = null;
 }
+
+// ============================================================
+// FUNÇÃO PARA RECUPERAR TAREFA
+// ============================================================
 
 function alunoRecoverTask(taskId) {
     pendingTaskId = taskId;
@@ -1353,24 +1486,38 @@ async function confirmRecover() {
     }
     
     try {
-        await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
+        console.log(`🔄 Recuperando tarefa ${pendingTaskId}`);
+        
+        showToast('⏳ Recuperando tarefa...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 status: 'Realizado', 
-                justification,
+                justification: justification,
                 alunoId: currentUser.id 
             })
         });
         
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao recuperar tarefa');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Tarefa recuperada:', data);
+        
         await loadAlunoData();
         updateAlunoXP();
         await checkAchievements();
-        renderAll();
+        await renderAlunoTasksByDay(selectedDay);
+        
         showToast('🔄 Tarefa recuperada! +25 XP', 'success');
+        
     } catch (error) {
-        console.error('Erro ao recuperar tarefa:', error);
-        showToast('❌ Erro ao recuperar', 'error');
+        console.error('❌ Erro ao recuperar tarefa:', error);
+        showToast('❌ ' + error.message, 'error');
     }
     
     closeRecoverModal();
@@ -1381,6 +1528,10 @@ function closeRecoverModal() {
     pendingTaskId = null;
 }
 
+// ============================================================
+// FUNÇÕES DE DÚVIDAS
+// ============================================================
+
 async function alunoSendQuestion() {
     const text = document.getElementById('aluno-question-text').value.trim();
     if (!text) {
@@ -1389,6 +1540,8 @@ async function alunoSendQuestion() {
     }
     
     try {
+        showToast('⏳ Enviando dúvida...', 'info');
+        
         await fetch(`${API_URL}/questions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1400,7 +1553,7 @@ async function alunoSendQuestion() {
         await checkAchievements();
         
         document.getElementById('aluno-question-text').value = '';
-        renderAll();
+        await renderAll();
         showToast('📤 Dúvida enviada! +10 XP', 'success');
     } catch (error) {
         console.error('Erro ao enviar dúvida:', error);
@@ -1436,10 +1589,13 @@ async function renderAlunoQuestions() {
 }
 
 // ============================================================
-// 🎨 RENDERIZAÇÃO
+// 🎨 RENDERIZAÇÃO PRINCIPAL
 // ============================================================
+
 async function renderAll() {
     if (!currentUser) return;
+    
+    console.log('🔄 Renderizando...');
     
     if (currentUser.role === 'adm') {
         await admRenderTasks();
@@ -1462,6 +1618,7 @@ async function renderAll() {
 // ============================================================
 // 🔔 TOAST
 // ============================================================
+
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -1488,6 +1645,9 @@ function showToast(message, type = 'info') {
 // ============================================================
 // 🔄 ATUALIZAÇÃO PERIÓDICA
 // ============================================================
+
+let refreshInterval = null;
+
 setInterval(() => {
     if (currentUser) {
         renderAll();
@@ -1497,10 +1657,11 @@ setInterval(() => {
 // ============================================================
 // 🚀 INICIALIZAÇÃO
 // ============================================================
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎓 StudyQuest com Neo4j inicializado!');
     console.log('👨‍🏫 Login ADM: David / david0724');
-    console.log('🎒 Login Aluno: Malu / 300504');
+    console.log('🎒 Login Aluno: Malu / Malu123');
 });
 
 document.addEventListener('keypress', (e) => {
