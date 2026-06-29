@@ -221,10 +221,10 @@ app.get('/api/users/aluno/:alunoId', async (req, res) => {
 
 // Criar tarefa
 app.post('/api/tasks', async (req, res) => {
-  const { alunoId, day, timeStart, timeEnd, name } = req.body;
+  const { alunoId, day, timeStart, timeEnd, name, scheduleId, descricao, cor } = req.body;
 
   try {
-    const taskId = Date.now();
+    const taskId = Date.now() + Math.random() * 1000;
     const timestamp = new Date().toLocaleString('pt-BR');
     
     const alunoResult = await runQuery(
@@ -243,12 +243,25 @@ app.post('/api/tasks', async (req, res) => {
         timeEnd: $timeEnd,
         name: $name,
         status: 'Pendente',
-        justification: ''
+        justification: '',
+        scheduleId: $scheduleId,
+        descricao: $descricao,
+        cor: $cor
       })
       CREATE (aluno)-[:TEM_TAREFA]->(t)
       RETURN t
       `,
-      { alunoId, taskId, day, timeStart, timeEnd, name }
+      { 
+        alunoId, 
+        taskId, 
+        day, 
+        timeStart, 
+        timeEnd, 
+        name,
+        scheduleId: scheduleId || '',
+        descricao: descricao || '',
+        cor: cor || 'activity-color-1'
+      }
     );
 
     const task = result.records[0].get('t').properties;
@@ -263,7 +276,7 @@ app.post('/api/tasks', async (req, res) => {
         taskId: $taskId,
         oldStatus: '-',
         newStatus: 'Pendente',
-        justification: 'Tarefa criada pelo assessor',
+        justification: 'Tarefa criada',
         alunoName: $alunoName,
         taskName: $taskName
       })
@@ -699,9 +712,9 @@ app.post('/api/achievements/check', async (req, res) => {
   }
 });
 
-// ============ HORÁRIOS (SCHEDULES) ============
+// ============ HORÁRIOS (SCHEDULES) - COM CRIAÇÃO AUTOMÁTICA DE TAREFAS ============
 
-// Criar um quadro de horários para um aluno
+// Criar um quadro de horários para um aluno e gerar tarefas automaticamente
 app.post('/api/schedules', async (req, res) => {
   const { alunoId, nome, dias } = req.body;
 
@@ -719,6 +732,7 @@ app.post('/api/schedules', async (req, res) => {
       return res.status(404).json({ error: 'Aluno não encontrado' });
     }
 
+    // Criar o schedule
     const result = await runQuery(
       `
       MATCH (aluno:User {id: $alunoId})
@@ -747,7 +761,111 @@ app.post('/api/schedules', async (req, res) => {
       schedule.dias = {};
     }
 
-    res.json(schedule);
+    // ====== CRIAR TAREFAS AUTOMATICAMENTE ======
+    const diasObj = schedule.dias || {};
+    const tarefasCriadas = [];
+    
+    // Mapeamento de dias da semana para português (formato das tarefas)
+    const dayMap = {
+      'Segunda': 'segunda',
+      'Terça': 'terca',
+      'Quarta': 'quarta',
+      'Quinta': 'quinta',
+      'Sexta': 'sexta',
+      'Sábado': 'sabado',
+      'Domingo': 'domingo'
+    };
+
+    const alunoName = alunoCheck.records[0].get('aluno').properties.name;
+
+    // Para cada dia e hora com atividade
+    for (const [dia, horas] of Object.entries(diasObj)) {
+      if (!horas || typeof horas !== 'object') continue;
+      
+      const dayKey = dayMap[dia] || dia.toLowerCase();
+      
+      for (const [hora, atividade] of Object.entries(horas)) {
+        if (!atividade || !atividade.nome) continue;
+        
+        // Calcular horário de fim (1 hora depois)
+        const horaParts = hora.split(':');
+        const horaInicio = parseInt(horaParts[0]);
+        const horaFim = horaInicio + 1;
+        const timeEnd = `${String(horaFim).padStart(2, '0')}:${horaParts[1] || '00'}`;
+        
+        // Criar a tarefa
+        const taskId = Date.now() + Math.random() * 1000;
+        const taskName = atividade.materia ? `${atividade.nome} - ${atividade.materia}` : atividade.nome;
+        
+        const taskResult = await runQuery(
+          `
+          MATCH (aluno:User {id: $alunoId})
+          CREATE (t:Task {
+            id: $taskId,
+            day: $day,
+            timeStart: $timeStart,
+            timeEnd: $timeEnd,
+            name: $name,
+            status: 'Pendente',
+            justification: '',
+            scheduleId: $scheduleId,
+            descricao: $descricao,
+            cor: $cor
+          })
+          CREATE (aluno)-[:TEM_TAREFA]->(t)
+          RETURN t
+          `,
+          {
+            alunoId,
+            taskId,
+            day: dayKey,
+            timeStart: hora,
+            timeEnd: timeEnd,
+            name: taskName,
+            scheduleId: scheduleId,
+            descricao: atividade.descricao || '',
+            cor: atividade.cor || 'activity-color-1'
+          }
+        );
+        
+        const task = taskResult.records[0].get('t').properties;
+        tarefasCriadas.push(task);
+        
+        // Criar log da criação
+        await runQuery(
+          `
+          MATCH (aluno:User {id: $alunoId})
+          CREATE (l:Log {
+            id: $logId,
+            timestamp: $timestamp,
+            alunoId: $alunoId,
+            taskId: $taskId,
+            oldStatus: '-',
+            newStatus: 'Pendente',
+            justification: 'Tarefa criada automaticamente pelo horário: ${nome}',
+            alunoName: $alunoName,
+            taskName: $taskName
+          })
+          CREATE (aluno)-[:TEM_LOG]->(l)
+          `,
+          {
+            alunoId,
+            taskId,
+            logId: String(Date.now() + Math.random() * 1000),
+            timestamp,
+            alunoName,
+            taskName
+          }
+        );
+      }
+    }
+
+    res.json({ 
+      schedule: schedule,
+      tarefasCriadas: tarefasCriadas,
+      totalTarefas: tarefasCriadas.length,
+      message: `Horário criado com ${tarefasCriadas.length} tarefas geradas automaticamente!`
+    });
   } catch (error) {
     console.error('Erro ao criar horário:', error);
     res.status(500).json({ error: 'Erro ao criar horário: ' + error.message });
@@ -865,10 +983,14 @@ app.delete('/api/schedules/:scheduleId', async (req, res) => {
   const { scheduleId } = req.params;
 
   try {
+    // Buscar e deletar também as tarefas vinculadas
     await runQuery(
       `
       MATCH (s:Schedule {id: $scheduleId})
-      DETACH DELETE s
+      OPTIONAL MATCH (aluno:User)-[:TEM_HORARIO]->(s)
+      OPTIONAL MATCH (aluno)-[:TEM_TAREFA]->(t:Task)
+      WHERE t.scheduleId = $scheduleId
+      DETACH DELETE s, t
       `,
       { scheduleId }
     );
