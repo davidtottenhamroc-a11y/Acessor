@@ -1307,20 +1307,22 @@ async function renderAlunoTasksByDay(day) {
 }
 
 // ============================================================
-// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS
+// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS (CORRIGIDA)
 // ============================================================
 
 async function alunoUpdateTaskStatus(taskId, newStatus) {
     try {
-        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskId} para "${newStatus}"`);
+        // Garantir que taskId seja string
+        const taskIdStr = String(taskId);
+        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
         
         // Desabilitar botões para evitar cliques duplos
-        const buttons = document.querySelectorAll(`#task-${taskId} .btn`);
+        const buttons = document.querySelectorAll(`#task-${taskIdStr} .btn`);
         buttons.forEach(btn => btn.disabled = true);
         
         showToast('⏳ Atualizando status...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${taskId}/status`, {
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -1339,44 +1341,6 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
         console.log('✅ Resposta do servidor:', data);
         
         if (data.success) {
-            // Atualizar o badge de status visualmente
-            const badge = document.getElementById(`status-badge-${taskId}`);
-            if (badge) {
-                const statusClasses = {
-                    'Pendente': 'badge-pending',
-                    'Em Andamento': 'badge-doing',
-                    'Realizado': 'badge-done',
-                    'Não Feito': 'badge-notdone'
-                };
-                badge.className = `badge ${statusClasses[newStatus] || 'badge-pending'}`;
-                badge.textContent = newStatus;
-            }
-            
-            // Atualizar os botões conforme o novo status
-            const taskItem = document.getElementById(`task-${taskId}`);
-            if (taskItem) {
-                const actionsDiv = taskItem.querySelector('.task-actions');
-                if (newStatus === 'Não Feito') {
-                    actionsDiv.innerHTML = `
-                        <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${taskId})" id="btn-recover-${taskId}">
-                            🔄 Recuperar
-                        </button>
-                    `;
-                } else {
-                    actionsDiv.innerHTML = `
-                        <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${taskId}, 'Realizado')" id="btn-done-${taskId}">
-                            ✅
-                        </button>
-                        <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${taskId}, 'Em Andamento')" id="btn-doing-${taskId}">
-                            🔄
-                        </button>
-                        <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${taskId})" id="btn-notdone-${taskId}">
-                            ❌
-                        </button>
-                    `;
-                }
-            }
-            
             // Recarregar dados do usuário
             await loadAlunoData();
             updateAlunoXP();
@@ -1400,17 +1364,85 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
         showToast('❌ ' + error.message, 'error');
         
         // Reabilitar botões
-        const buttons = document.querySelectorAll(`#task-${taskId} .btn`);
+        const taskIdStr = String(taskId);
+        const buttons = document.querySelectorAll(`#task-${taskIdStr} .btn`);
         buttons.forEach(btn => btn.disabled = false);
     }
 }
 
 // ============================================================
-// FUNÇÃO PARA MARCAR COMO NÃO FEITO
+// RENDERIZAR TAREFAS DO ALUNO (CORRIGIDA)
+// ============================================================
+
+async function renderAlunoTasksByDay(day) {
+    const container = document.getElementById('aluno-tasks-display');
+    
+    try {
+        const response = await fetch(`${API_URL}/tasks/aluno/${currentUser.id}`);
+        const allTasks = await response.json();
+        const tasks = allTasks.filter(t => t.day === day);
+        
+        console.log(`📋 Tarefas encontradas para ${day}:`, tasks);
+        
+        if (tasks.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa cadastrada para este dia</p>';
+            return;
+        }
+        
+        const statusBadges = {
+            'Pendente': 'badge-pending',
+            'Em Andamento': 'badge-doing',
+            'Realizado': 'badge-done',
+            'Não Feito': 'badge-notdone'
+        };
+        
+        tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
+        
+        container.innerHTML = tasks.map(t => {
+            const taskId = String(t.id); // Garantir que é string
+            return `
+                <div class="task-item slide-in" id="task-${taskId}">
+                    <div class="task-info">
+                        <span class="task-time">🕐 ${t.timeStart} - ${t.timeEnd}</span>
+                        <strong>${t.name}</strong>
+                        <br>
+                        <span class="badge ${statusBadges[t.status] || 'badge-pending'}" id="status-badge-${taskId}">${t.status || 'Pendente'}</span>
+                        ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
+                        ${t.status === 'Não Feito' ? '<br><small style="color:var(--accent-orange);">⚠️ Requer justificativa para alterar</small>' : ''}
+                    </div>
+                    <div class="task-actions">
+                        ${t.status !== 'Não Feito' ? `
+                            <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus('${taskId}', 'Realizado')" id="btn-done-${taskId}">
+                                ✅
+                            </button>
+                            <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus('${taskId}', 'Em Andamento')" id="btn-doing-${taskId}">
+                                🔄
+                            </button>
+                            <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone('${taskId}')" id="btn-notdone-${taskId}">
+                                ❌
+                            </button>
+                        ` : `
+                            <button class="btn btn-small btn-success" onclick="alunoRecoverTask('${taskId}')" id="btn-recover-${taskId}">
+                                🔄 Recuperar
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar tarefas:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar tarefas</p>';
+    }
+}
+
+// ============================================================
+// FUNÇÃO PARA MARCAR COMO NÃO FEITO (CORRIGIDA)
 // ============================================================
 
 function alunoMarkNotDone(taskId) {
-    pendingTaskId = taskId;
+    pendingTaskId = String(taskId); // Garantir que é string
     document.getElementById('justify-text').value = '';
     document.getElementById('justify-modal').classList.remove('hidden');
 }
@@ -1425,11 +1457,12 @@ async function confirmNotDone() {
     }
     
     try {
-        console.log(`❌ Marcando tarefa ${pendingTaskId} como Não Feito`);
+        const taskIdStr = String(pendingTaskId);
+        console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
         
         showToast('⏳ Atualizando...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -1467,11 +1500,11 @@ function closeJustifyModal() {
 }
 
 // ============================================================
-// FUNÇÃO PARA RECUPERAR TAREFA
+// FUNÇÃO PARA RECUPERAR TAREFA (CORRIGIDA)
 // ============================================================
 
 function alunoRecoverTask(taskId) {
-    pendingTaskId = taskId;
+    pendingTaskId = String(taskId); // Garantir que é string
     document.getElementById('recover-text').value = '';
     document.getElementById('recover-modal').classList.remove('hidden');
 }
@@ -1486,11 +1519,12 @@ async function confirmRecover() {
     }
     
     try {
-        console.log(`🔄 Recuperando tarefa ${pendingTaskId}`);
+        const taskIdStr = String(pendingTaskId);
+        console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
         
         showToast('⏳ Recuperando tarefa...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${pendingTaskId}/status`, {
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -1527,7 +1561,6 @@ function closeRecoverModal() {
     document.getElementById('recover-modal').classList.add('hidden');
     pendingTaskId = null;
 }
-
 // ============================================================
 // FUNÇÕES DE DÚVIDAS
 // ============================================================
