@@ -2181,17 +2181,14 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         console.log('✅ Resposta do servidor:', data);
         
         if (data.success) {
-            // Recarregar dados do aluno
             await loadAlunoData();
             updateAlunoXP();
             await checkAchievements();
             
-            // Recarregar a grade
             if (currentScheduleId) {
                 await renderScheduleGrid(currentScheduleId, 'aluno');
             }
             
-            // Recarregar as tarefas do dia
             if (selectedDay) {
                 await renderAlunoTasksByDay(selectedDay);
             }
