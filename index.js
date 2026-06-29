@@ -219,9 +219,9 @@ app.get('/api/users/aluno/:alunoId', async (req, res) => {
 
 // ============ TAREFAS ============
 
-// Criar tarefa com data
+// Criar tarefa
 app.post('/api/tasks', async (req, res) => {
-  const { alunoId, data, timeStart, timeEnd, name, scheduleId, descricao, cor } = req.body;
+  const { alunoId, data, diaSemana, timeStart, timeEnd, name, scheduleId, descricao, cor } = req.body;
 
   try {
     const taskId = Date.now() + Math.random() * 1000;
@@ -239,6 +239,7 @@ app.post('/api/tasks', async (req, res) => {
       CREATE (t:Task {
         id: $taskId,
         data: $data,
+        diaSemana: $diaSemana,
         timeStart: $timeStart,
         timeEnd: $timeEnd,
         name: $name,
@@ -255,6 +256,7 @@ app.post('/api/tasks', async (req, res) => {
         alunoId, 
         taskId, 
         data, 
+        diaSemana: diaSemana || '',
         timeStart, 
         timeEnd, 
         name,
@@ -321,6 +323,29 @@ app.get('/api/tasks/aluno/:alunoId', async (req, res) => {
   }
 });
 
+// Buscar tarefas por data
+app.get('/api/tasks/aluno/:alunoId/data/:data', async (req, res) => {
+  const { alunoId, data } = req.params;
+
+  try {
+    const result = await runQuery(
+      `
+      MATCH (aluno:User {id: $alunoId})-[:TEM_TAREFA]->(t:Task)
+      WHERE t.data = $data
+      RETURN t
+      ORDER BY t.timeStart
+      `,
+      { alunoId, data }
+    );
+
+    const tasks = result.records.map(r => r.get('t').properties);
+    res.json(tasks);
+  } catch (error) {
+    console.error('Erro ao buscar tarefas por data:', error);
+    res.status(500).json({ error: 'Erro ao buscar tarefas por data: ' + error.message });
+  }
+});
+
 // Buscar tarefas de todos os alunos de um admin
 app.get('/api/tasks/admin/:admId', async (req, res) => {
   const { admId } = req.params;
@@ -344,29 +369,6 @@ app.get('/api/tasks/admin/:admId', async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar tarefas:', error);
     res.status(500).json({ error: 'Erro ao buscar tarefas: ' + error.message });
-  }
-});
-
-// Buscar tarefas por data
-app.get('/api/tasks/aluno/:alunoId/data/:data', async (req, res) => {
-  const { alunoId, data } = req.params;
-
-  try {
-    const result = await runQuery(
-      `
-      MATCH (aluno:User {id: $alunoId})-[:TEM_TAREFA]->(t:Task)
-      WHERE t.data = $data
-      RETURN t
-      ORDER BY t.timeStart
-      `,
-      { alunoId, data }
-    );
-
-    const tasks = result.records.map(r => r.get('t').properties);
-    res.json(tasks);
-  } catch (error) {
-    console.error('Erro ao buscar tarefas por data:', error);
-    res.status(500).json({ error: 'Erro ao buscar tarefas por data: ' + error.message });
   }
 });
 
@@ -735,13 +737,13 @@ app.post('/api/achievements/check', async (req, res) => {
   }
 });
 
-// ============ HORÁRIOS (SCHEDULES) COM CALENDÁRIO ============
+// ============ HORÁRIOS (SCHEDULES) ============
 
-// Criar um quadro de horários para um aluno com período
+// Criar um quadro de horários para um aluno e gerar tarefas automaticamente
 app.post('/api/schedules', async (req, res) => {
   const { alunoId, nome, dataInicio, dataFim, diasSemana, atividades } = req.body;
 
-  console.log('📝 Recebendo criação de horário com calendário:');
+  console.log('📝 Recebendo criação de horário:');
   console.log('  - alunoId:', alunoId);
   console.log('  - nome:', nome);
   console.log('  - dataInicio:', dataInicio);
@@ -765,7 +767,7 @@ app.post('/api/schedules', async (req, res) => {
 
     const alunoName = alunoCheck.records[0].get('aluno').properties.name;
 
-    // Criar o schedule com as informações do calendário
+    // Criar o schedule
     const result = await runQuery(
       `
       MATCH (aluno:User {id: $alunoId})
@@ -802,18 +804,16 @@ app.post('/api/schedules', async (req, res) => {
       schedule.atividades = {};
     }
 
-    // ====== CRIAR TAREFAS PARA CADA DATA NO PERÍODO ======
+    // ====== CRIAR TAREFAS AUTOMATICAMENTE ======
     const tarefasCriadas = [];
     const tarefasErro = [];
 
     if (dataInicio && dataFim && atividades) {
       console.log('🔄 Gerando tarefas para o período...');
       
-      // Converter datas
       const startDate = new Date(dataInicio);
       const endDate = new Date(dataFim);
       
-      // Mapeamento de dias da semana (0=domingo, 1=segunda, ...)
       const dayMap = {
         'segunda': 1,
         'terca': 2,
@@ -824,22 +824,30 @@ app.post('/api/schedules', async (req, res) => {
         'domingo': 0
       };
 
-      // Para cada dia no período
+      const dayNames = {
+        0: 'domingo',
+        1: 'segunda',
+        2: 'terca',
+        3: 'quarta',
+        4: 'quinta',
+        5: 'sexta',
+        6: 'sabado'
+      };
+
+      let totalTarefas = 0;
       const currentDate = new Date(startDate);
+      
       while (currentDate <= endDate) {
-        const dayOfWeek = currentDate.getDay(); // 0=domingo, 1=segunda, ...
+        const dayOfWeek = currentDate.getDay();
         const dateStr = currentDate.toISOString().split('T')[0];
+        const diaSemanaNome = dayNames[dayOfWeek];
         
         // Verificar se este dia da semana está selecionado
-        const diaSemanaKeys = Object.keys(dayMap);
-        const diaSemanaAtual = diaSemanaKeys.find(key => dayMap[key] === dayOfWeek);
-        
-        if (diasSemana && diasSemana.includes(diaSemanaAtual)) {
-          console.log(`  📅 Gerando tarefas para ${dateStr} (${diaSemanaAtual})`);
+        if (diasSemana && diasSemana.includes(diaSemanaNome)) {
+          console.log(`  📅 Gerando tarefas para ${dateStr} (${diaSemanaNome})`);
           
-          // Para cada atividade deste dia
-          if (atividades[diaSemanaAtual]) {
-            for (const [hora, atividade] of Object.entries(atividades[diaSemanaAtual])) {
+          if (atividades[diaSemanaNome]) {
+            for (const [hora, atividade] of Object.entries(atividades[diaSemanaNome])) {
               if (!atividade || !atividade.nome) continue;
               
               try {
@@ -859,6 +867,7 @@ app.post('/api/schedules', async (req, res) => {
                   CREATE (t:Task {
                     id: $taskId,
                     data: $data,
+                    diaSemana: $diaSemana,
                     timeStart: $timeStart,
                     timeEnd: $timeEnd,
                     name: $name,
@@ -875,6 +884,7 @@ app.post('/api/schedules', async (req, res) => {
                     alunoId,
                     taskId,
                     data: dateStr,
+                    diaSemana: diaSemanaNome,
                     timeStart: hora,
                     timeEnd: timeEnd,
                     name: taskName,
@@ -886,6 +896,7 @@ app.post('/api/schedules', async (req, res) => {
                 
                 const task = taskResult.records[0].get('t').properties;
                 tarefasCriadas.push(task);
+                totalTarefas++;
                 
                 // Criar log
                 await runQuery(
@@ -922,14 +933,10 @@ app.post('/api/schedules', async (req, res) => {
           }
         }
         
-        // Próximo dia
         currentDate.setDate(currentDate.getDate() + 1);
       }
-    }
-
-    console.log(`✅ ${tarefasCriadas.length} tarefas criadas com sucesso!`);
-    if (tarefasErro.length > 0) {
-      console.log(`⚠️ ${tarefasErro.length} tarefas com erro:`, tarefasErro);
+      
+      console.log(`✅ ${totalTarefas} tarefas criadas com sucesso!`);
     }
 
     res.json({ 
