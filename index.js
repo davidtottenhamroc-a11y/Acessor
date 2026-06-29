@@ -292,6 +292,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
 
   try {
     console.log(`🔄 Atualizando tarefa ${taskId} para status: ${status}`);
+    console.log(`📝 Dados recebidos:`, { taskId, status, justification, alunoId });
 
     // Verificar se a tarefa existe
     const checkResult = await runQuery(
@@ -300,6 +301,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     );
 
     if (checkResult.records.length === 0) {
+      console.log(`❌ Tarefa ${taskId} não encontrada`);
       return res.status(404).json({ error: 'Tarefa não encontrada' });
     }
 
@@ -348,7 +350,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       {
         alunoId,
         taskId,
-        logId: Date.now() + 1,
+        logId: String(Date.now() + 1),
         timestamp,
         oldStatus,
         status,
@@ -362,9 +364,9 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     let xpGanho = 0;
     if (status === 'Realizado' && oldStatus !== 'Realizado') {
       if (oldStatus === 'Não Feito') {
-        xpGanho = 25; // Recuperação
+        xpGanho = 25;
       } else {
-        xpGanho = 15; // Conclusão normal
+        xpGanho = 15;
       }
     } else if (status === 'Em Andamento' && oldStatus === 'Pendente') {
       xpGanho = 5;
@@ -404,7 +406,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar status da tarefa' });
   }
 });
-
 // ============ DÚVIDAS ============
 // Enviar dúvida
 app.post('/api/questions', async (req, res) => {
