@@ -2176,11 +2176,13 @@ async function updateTaskFromSchedule(taskId, newStatus) {
             updateAlunoXP();
             await checkAchievements();
             
+            // Recarregar a grade
             if (currentScheduleId) {
                 await renderScheduleGrid(currentScheduleId, 'aluno');
             }
             
-            if (selectedDay) {
+            // Recarregar as tarefas do dia - verificar se selectedDay existe
+            if (typeof selectedDay !== 'undefined' && selectedDay) {
                 await renderAlunoTasksByDay(selectedDay);
             }
             
@@ -2256,7 +2258,7 @@ async function confirmNotDone() {
             await renderScheduleGrid(currentScheduleId, 'aluno');
         }
         
-        if (selectedDay) {
+        if (typeof selectedDay !== 'undefined' && selectedDay) {
             await renderAlunoTasksByDay(selectedDay);
         }
         
@@ -2332,7 +2334,7 @@ async function confirmRecover() {
             await renderScheduleGrid(currentScheduleId, 'aluno');
         }
         
-        if (selectedDay) {
+        if (typeof selectedDay !== 'undefined' && selectedDay) {
             await renderAlunoTasksByDay(selectedDay);
         }
         
