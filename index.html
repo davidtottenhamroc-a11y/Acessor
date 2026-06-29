@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StudyQuest - Assessoria Gamificada</title>
     <style>
+        /* ===== TODOS OS ESTILOS DO SISTEMA ===== */
         :root {
             --bg-primary: #0a0e27;
             --bg-secondary: #131837;
@@ -749,6 +750,60 @@
             box-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
 
+        /* Estilos do calendário */
+        .calendar-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .calendar-controls .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .calendar-controls .form-group label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .day-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .day-selector .day-btn {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .day-selector .day-btn:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .day-selector .day-btn.selected {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .grid-week { grid-template-columns: repeat(3, 1fr); }
@@ -762,6 +817,7 @@
             .schedule-controls { flex-direction: column; }
             .schedule-controls select,
             .schedule-controls input { min-width: 100%; }
+            .calendar-controls { flex-direction: column; }
         }
         @media (max-width: 480px) {
             .grid-week { grid-template-columns: repeat(2, 1fr); }
@@ -837,49 +893,9 @@
                 </div>
             </div>
 
-            <div class="grid-2 mt-2">
-                <div class="card">
-                    <div class="card-title">📅 Cadastrar Horário/Tarefa</div>
-                    <select id="adm-select-aluno" class="mb-1">
-                        <option value="">Selecione o aluno</option>
-                    </select>
-                    <select id="adm-select-day" class="mb-1">
-                        <option value="segunda">Segunda-feira</option>
-                        <option value="terca">Terça-feira</option>
-                        <option value="quarta">Quarta-feira</option>
-                        <option value="quinta">Quinta-feira</option>
-                        <option value="sexta">Sexta-feira</option>
-                    </select>
-                    <div style="display:flex;gap:10px;margin-bottom:10px;">
-                        <div style="flex:1;">
-                            <label style="font-size:12px;color:var(--text-secondary);">Horário Início</label>
-                            <input type="time" id="adm-task-time-start">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:12px;color:var(--text-secondary);">Horário Fim</label>
-                            <input type="time" id="adm-task-time-end">
-                        </div>
-                    </div>
-                    <input type="text" id="adm-task-name" class="mb-1" placeholder="Nome da matéria/tarefa">
-                    <button class="btn btn-primary" onclick="admAddTask()" style="width:100%;justify-content:center;">
-                        ➕ Adicionar Tarefa
-                    </button>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">
-                        💬 Dúvidas Recebidas
-                        <span id="adm-notif-badge" class="notification-badge hidden">0</span>
-                    </div>
-                    <div id="adm-questions-list">
-                        <p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SEÇÃO DE HORÁRIOS - VIEW ADM -->
+            <!-- SEÇÃO DE HORÁRIOS COM CALENDÁRIO -->
             <div class="card mt-2">
-                <div class="card-title">📅 Gerenciar Horários</div>
+                <div class="card-title">📅 Criar Horário com Calendário</div>
                 
                 <div class="schedule-controls">
                     <select id="adm-schedule-aluno" class="mb-1" onchange="admLoadSchedules()">
@@ -889,6 +905,30 @@
                     <button class="btn btn-primary" onclick="admCreateSchedule()">
                         ➕ Criar Horário
                     </button>
+                </div>
+
+                <!-- Controles do Calendário -->
+                <div class="calendar-controls">
+                    <div class="form-group">
+                        <label>📅 Data Início</label>
+                        <input type="date" id="schedule-data-inicio">
+                    </div>
+                    <div class="form-group">
+                        <label>📅 Data Fim</label>
+                        <input type="date" id="schedule-data-fim">
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label>📆 Dias da Semana</label>
+                        <div class="day-selector" id="day-selector">
+                            <button class="day-btn" data-day="segunda" onclick="toggleDay('segunda')">Seg</button>
+                            <button class="day-btn" data-day="terca" onclick="toggleDay('terca')">Ter</button>
+                            <button class="day-btn" data-day="quarta" onclick="toggleDay('quarta')">Qua</button>
+                            <button class="day-btn" data-day="quinta" onclick="toggleDay('quinta')">Qui</button>
+                            <button class="day-btn" data-day="sexta" onclick="toggleDay('sexta')">Sex</button>
+                            <button class="day-btn" data-day="sabado" onclick="toggleDay('sabado')">Sáb</button>
+                            <button class="day-btn" data-day="domingo" onclick="toggleDay('domingo')">Dom</button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div id="adm-schedules-list" class="schedule-list"></div>
@@ -952,20 +992,7 @@
             </div>
 
             <div class="card">
-                <div class="card-title">📅 Minha Agenda da Semana</div>
-                <div class="grid-week" id="week-overview"></div>
-            </div>
-
-            <div class="card">
-                <div class="card-title" id="selected-day-title">📌 Todas as Tarefas</div>
-                <div id="aluno-tasks-display">
-                    <p style="color:var(--text-secondary);">Clique em um dia para ver as tarefas</p>
-                </div>
-            </div>
-
-            <!-- SEÇÃO DE HORÁRIOS - VIEW ALUNO -->
-            <div class="card">
-                <div class="card-title">📅 Meus Horários</div>
+                <div class="card-title">📅 Minha Agenda</div>
                 <div id="aluno-schedules-list" class="schedule-list"></div>
                 <div class="schedule-container" id="aluno-schedule-display">
                     <p style="color:var(--text-secondary);">Selecione um horário para visualizar</p>
@@ -1075,14 +1102,16 @@ let selectedRole = null;
 let pendingTaskId = null;
 let selectedDay = null;
 let isUpdating = false;
+let isRendering = false;
 
 // ============================================================
-// 📅 VARIÁVEIS DO SISTEMA DE HORÁRIOS
+// 📅 VARIÁVEIS DO CALENDÁRIO
 // ============================================================
 let currentScheduleId = null;
 let isEditMode = false;
 let selectedCell = null;
 let modalSelectedColor = 'activity-color-1';
+let selectedDays = [];
 
 const DIAS_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 const HORARIOS_PADRAO = [
@@ -1299,212 +1328,743 @@ async function admRemoverAluno(alunoId) {
     }
 }
 
-async function admAddTask() {
-    const alunoId = document.getElementById('adm-select-aluno').value;
-    const day = document.getElementById('adm-select-day').value;
-    const timeStart = document.getElementById('adm-task-time-start').value;
-    const timeEnd = document.getElementById('adm-task-time-end').value;
-    const name = document.getElementById('adm-task-name').value.trim();
-    
-    if (!alunoId || !timeStart || !timeEnd || !name) {
-        showToast('⚠️ Preencha todos os campos!', 'warning');
-        return;
+// ============================================================
+// 📅 FUNÇÕES DO CALENDÁRIO
+// ============================================================
+
+// Toggle dia da semana selecionado
+function toggleDay(day) {
+    const index = selectedDays.indexOf(day);
+    if (index > -1) {
+        selectedDays.splice(index, 1);
+    } else {
+        selectedDays.push(day);
     }
     
-    if (timeStart >= timeEnd) {
-        showToast('⚠️ Horário de início deve ser menor que o fim!', 'warning');
-        return;
-    }
-    
+    // Atualizar UI
+    document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.classList.toggle('selected', selectedDays.includes(btn.dataset.day));
+    });
+}
+
+// ============================================================
+// 📅 FUNÇÕES DE HORÁRIO (SCHEDULES)
+// ============================================================
+
+async function admLoadSchedules() {
     try {
-        showToast('⏳ Criando tarefa...', 'info');
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        if (!alunoId) {
+            document.getElementById('adm-schedules-list').innerHTML = 
+                '<p style="color:var(--text-secondary);">Selecione um aluno</p>';
+            return;
+        }
+
+        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
         
-        await fetch(`${API_URL}/tasks`, {
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const schedules = Array.isArray(data) ? data : [];
+
+        const container = document.getElementById('adm-schedules-list');
+        
+        if (schedules.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum horário criado</p>';
+            return;
+        }
+
+        container.innerHTML = schedules.map(s => `
+            <div class="schedule-item ${s.id === currentScheduleId ? 'active' : ''}" 
+                 onclick="admSelectSchedule('${s.id}')">
+                <span class="schedule-name">📋 ${s.nome || 'Sem nome'}</span>
+                <span class="schedule-date">${s.dataInicio || ''} → ${s.dataFim || ''}</span>
+                <span class="schedule-badge">${s.diasSemana ? s.diasSemana.length : 0} dias</span>
+                <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); admDeleteSchedule('${s.id}')">🗑️</button>
+            </div>
+        `).join('');
+
+        if (schedules.length > 0 && !currentScheduleId) {
+            admSelectSchedule(schedules[0].id);
+        } else if (schedules.length > 0 && currentScheduleId) {
+            const exists = schedules.some(s => s.id === currentScheduleId);
+            if (!exists) {
+                admSelectSchedule(schedules[0].id);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar horários:', error);
+        document.getElementById('adm-schedules-list').innerHTML = 
+            '<p style="color:var(--accent-red);">Erro ao carregar horários: ' + error.message + '</p>';
+    }
+}
+
+async function admSelectSchedule(scheduleId) {
+    if (!scheduleId) {
+        console.warn('⚠️ scheduleId vazio');
+        return;
+    }
+    currentScheduleId = scheduleId;
+    await admLoadSchedules();
+    await renderScheduleGrid(scheduleId, 'adm');
+}
+
+async function admCreateSchedule() {
+    const alunoId = document.getElementById('adm-schedule-aluno').value;
+    const nome = document.getElementById('adm-schedule-name').value.trim();
+    const dataInicio = document.getElementById('schedule-data-inicio').value;
+    const dataFim = document.getElementById('schedule-data-fim').value;
+
+    if (!alunoId) {
+        showToast('⚠️ Selecione um aluno!', 'warning');
+        return;
+    }
+    if (!nome) {
+        showToast('⚠️ Digite um nome para o horário!', 'warning');
+        return;
+    }
+    if (!dataInicio || !dataFim) {
+        showToast('⚠️ Selecione o período (data início e fim)!', 'warning');
+        return;
+    }
+    if (selectedDays.length === 0) {
+        showToast('⚠️ Selecione pelo menos um dia da semana!', 'warning');
+        return;
+    }
+
+    // Verificar se já existem atividades para este horário
+    const atividades = {};
+
+    try {
+        showToast('⏳ Criando horário e gerando tarefas...', 'info');
+        
+        const response = await fetch(`${API_URL}/schedules`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ alunoId, day, timeStart, timeEnd, name, admId: currentUser.id })
+            body: JSON.stringify({ 
+                alunoId, 
+                nome, 
+                dataInicio, 
+                dataFim, 
+                diasSemana: selectedDays,
+                atividades: atividades
+            })
         });
-        
-        document.getElementById('adm-task-time-start').value = '';
-        document.getElementById('adm-task-time-end').value = '';
-        document.getElementById('adm-task-name').value = '';
-        
-        await renderAll();
-        showToast('✅ Tarefa cadastrada com sucesso!', 'success');
-    } catch (error) {
-        console.error('Erro ao criar tarefa:', error);
-        showToast('❌ Erro ao criar tarefa', 'error');
-    }
-}
 
-async function admRenderTasks() {
-    const filterId = document.getElementById('adm-filter-aluno').value;
-    const container = document.getElementById('adm-tasks-list');
-    
-    try {
-        const response = await fetch(`${API_URL}/tasks/admin/${currentUser.id}`);
-        let tasks = await response.json();
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao criar horário');
+        }
+
+        const result = await response.json();
+        console.log('✅ Resposta do servidor:', result);
         
-        if (filterId !== 'all') {
-            tasks = tasks.filter(t => t.alunoId === filterId);
+        document.getElementById('adm-schedule-name').value = '';
+        document.getElementById('schedule-data-inicio').value = '';
+        document.getElementById('schedule-data-fim').value = '';
+        selectedDays = [];
+        document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('selected'));
+        
+        await admLoadSchedules();
+        
+        if (result.schedule) {
+            admSelectSchedule(result.schedule.id);
         }
         
-        if (tasks.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma tarefa encontrada</p>';
-            return;
-        }
-        
-        const dayNames = { segunda:'Seg', terca:'Ter', quarta:'Qua', quinta:'Qui', sexta:'Sex' };
-        const statusBadges = {
-            'Pendente': 'badge-pending',
-            'Em Andamento': 'badge-doing',
-            'Realizado': 'badge-done',
-            'Não Feito': 'badge-notdone'
-        };
-        
-        const dayOrder = ['segunda','terca','quarta','quinta','sexta'];
-        tasks.sort((a,b) => {
-            if (a.day !== b.day) return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
-            return a.timeStart.localeCompare(b.timeStart);
-        });
-        
-        container.innerHTML = tasks.map(t => `
-            <div class="task-item slide-in">
-                <div class="task-info">
-                    <strong>${t.alunoName || 'Aluno'}</strong> • 
-                    <span style="color:var(--text-secondary);">${dayNames[t.day]}</span>
-                    <span class="task-time">${t.timeStart} - ${t.timeEnd}</span> | ${t.name}
-                    <br>
-                    <span class="badge ${statusBadges[t.status]}">${t.status}</span>
-                    ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
-                </div>
-                <button class="btn btn-small btn-danger" onclick="admDeleteTask('${t.id}')">🗑️</button>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Erro ao carregar tarefas:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar tarefas</p>';
-    }
-}
-
-async function admDeleteTask(taskId) {
-    if (!confirm('Deseja realmente excluir esta tarefa?')) return;
-    
-    try {
-        await fetch(`${API_URL}/tasks/${taskId}`, { method: 'DELETE' });
-        await renderAll();
-        showToast('🗑️ Tarefa excluída', 'info');
-    } catch (error) {
-        console.error('Erro ao deletar tarefa:', error);
-        showToast('❌ Erro ao deletar tarefa', 'error');
-    }
-}
-
-async function admRenderQuestions() {
-    const container = document.getElementById('adm-questions-list');
-    const badge = document.getElementById('adm-notif-badge');
-    
-    try {
-        const response = await fetch(`${API_URL}/questions/admin/${currentUser.id}`);
-        const questions = await response.json();
-        
-        const newCount = questions.filter(q => q.status === 'Nova').length;
-        
-        if (newCount > 0) {
-            badge.classList.remove('hidden');
-            badge.textContent = newCount;
+        if (result.totalTarefas > 0) {
+            showToast(`✅ Horário criado com ${result.totalTarefas} tarefas geradas!`, 'success');
         } else {
-            badge.classList.add('hidden');
+            showToast('⚠️ Horário criado! Adicione atividades na grade para gerar tarefas.', 'warning');
         }
-        
-        if (questions.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>';
-            return;
-        }
-        
-        container.innerHTML = questions.map(q => `
-            <div class="question-item ${q.status === 'Nova' ? 'new-question' : ''}">
-                <strong>${q.alunoName || 'Aluno'}</strong>
-                <span class="badge ${q.status === 'Nova' ? 'badge-new' : 'badge-done'}">${q.status}</span>
-                <p style="margin:8px 0;">${q.text}</p>
-                ${q.answer ? `<div class="answer-box">✅ ${q.answer}</div>` : ''}
-                ${q.status !== 'Respondida' ? `
-                    <button class="btn btn-small btn-primary mt-1" onclick="admAnswerQuestion('${q.id}')">
-                        ✏️ Responder
-                    </button>
-                ` : ''}
-            </div>
-        `).join('');
     } catch (error) {
-        console.error('Erro ao carregar dúvidas:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar dúvidas</p>';
+        console.error('❌ Erro ao criar horário:', error);
+        showToast('❌ ' + error.message, 'error');
     }
 }
 
-async function admAnswerQuestion(qId) {
-    const answer = prompt('Digite a resposta:');
-    if (!answer || !answer.trim()) return;
-    
+async function admDeleteSchedule(scheduleId) {
+    if (!confirm('Deseja realmente excluir este horário e todas as tarefas vinculadas?')) return;
+
     try {
-        await fetch(`${API_URL}/questions/${qId}/answer`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answer: answer.trim() })
+        await fetch(`${API_URL}/schedules/${scheduleId}`, { method: 'DELETE' });
+        currentScheduleId = null;
+        await admLoadSchedules();
+        document.getElementById('adm-schedule-display').innerHTML = 
+            '<p style="color:var(--text-secondary);">Selecione ou crie um horário para editar</p>';
+        showToast('🗑️ Horário excluído', 'info');
+    } catch (error) {
+        console.error('Erro ao deletar horário:', error);
+        showToast('❌ Erro ao deletar horário', 'error');
+    }
+}
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const toggle = document.getElementById('edit-toggle');
+    const label = document.getElementById('edit-mode-label');
+    
+    toggle.classList.toggle('active', isEditMode);
+    label.textContent = isEditMode ? 'Ativado' : 'Desativado';
+    
+    if (currentScheduleId) {
+        renderScheduleGrid(currentScheduleId, 'adm');
+    }
+}
+
+function selectModalColor(colorId) {
+    modalSelectedColor = colorId;
+    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
+        el.classList.toggle('selected', el.className.includes(colorId));
+    });
+}
+
+// ============================================================
+// 🎯 FUNÇÕES DA GRADE HORÁRIA
+// ============================================================
+
+async function renderScheduleGrid(scheduleId, view = 'adm') {
+    const container = document.getElementById(
+        view === 'adm' ? 'adm-schedule-display' : 'aluno-schedule-display'
+    );
+
+    try {
+        let schedules = [];
+        let tarefas = [];
+        
+        if (view === 'adm') {
+            const alunoId = document.getElementById('adm-schedule-aluno').value;
+            if (!alunoId) {
+                container.innerHTML = '<p style="color:var(--text-secondary);">Selecione um aluno primeiro</p>';
+                return;
+            }
+            
+            const [schedulesRes, tasksRes] = await Promise.all([
+                fetch(`${API_URL}/schedules/aluno/${alunoId}`),
+                fetch(`${API_URL}/tasks/aluno/${alunoId}`)
+            ]);
+            
+            if (!schedulesRes.ok) throw new Error('Erro ao buscar horários');
+            if (!tasksRes.ok) throw new Error('Erro ao buscar tarefas');
+            
+            const data = await schedulesRes.json();
+            schedules = Array.isArray(data) ? data : [];
+            tarefas = await tasksRes.json();
+        } else {
+            const [schedulesRes, tasksRes] = await Promise.all([
+                fetch(`${API_URL}/schedules/aluno/${currentUser.id}`),
+                fetch(`${API_URL}/tasks/aluno/${currentUser.id}`)
+            ]);
+            
+            if (!schedulesRes.ok) throw new Error('Erro ao buscar horários');
+            if (!tasksRes.ok) throw new Error('Erro ao buscar tarefas');
+            
+            const data = await schedulesRes.json();
+            schedules = Array.isArray(data) ? data : [];
+            tarefas = await tasksRes.json();
+        }
+
+        const schedule = schedules.find(s => s.id === scheduleId);
+
+        if (!schedule) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Horário não encontrado</p>';
+            return;
+        }
+
+        const atividades = schedule.atividades || {};
+        const isAdmin = view === 'adm';
+        const isAluno = view === 'aluno';
+
+        // Mapear tarefas por dia/hora
+        const tarefasMap = {};
+        tarefas.forEach(t => {
+            const key = `${t.data}_${t.timeStart}`;
+            tarefasMap[key] = t;
         });
-        
-        await renderAll();
-        showToast('✅ Resposta enviada!', 'success');
-    } catch (error) {
-        console.error('Erro ao responder:', error);
-        showToast('❌ Erro ao responder', 'error');
-    }
-}
 
-async function admRenderActivityLog() {
-    const container = document.getElementById('adm-activity-log');
-    
-    try {
-        const response = await fetch(`${API_URL}/logs/admin/${currentUser.id}`);
-        const logs = await response.json();
-        
-        if (logs.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>';
-            return;
-        }
-        
-        const statusEmoji = {
-            'Pendente': '🟡',
-            'Em Andamento': '🔵',
-            'Realizado': '🟢',
-            'Não Feito': '🔴',
-            '-': '🆕'
-        };
-        
-        container.innerHTML = `
-            <div class="history-log">
-                ${logs.map(log => {
-                    const oldEmoji = statusEmoji[log.oldStatus] || '⚪';
-                    const newEmoji = statusEmoji[log.newStatus] || '⚪';
-                    return `
-                        <div class="log-entry">
-                            <strong>${log.timestamp}</strong> - 
-                            ${log.alunoName} | ${log.taskName}<br>
-                            ${oldEmoji} ${log.oldStatus} → ${newEmoji} ${log.newStatus}
-                            ${log.justification ? `<br><small>📝 ${log.justification}</small>` : ''}
+        // Encontrar a data atual para exibir
+        const hoje = new Date().toISOString().split('T')[0];
+        const dataAtual = hoje;
+
+        // Buscar tarefas do dia atual
+        const tarefasHoje = tarefas.filter(t => t.data === dataAtual);
+
+        let html = `
+            <div class="schedule-container">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+                    <div>
+                        <h4 style="color:var(--accent-blue);font-size:16px;">${schedule.nome || 'Sem nome'}</h4>
+                        <span style="font-size:11px;color:var(--text-secondary);">
+                            Período: ${schedule.dataInicio || 'N/A'} → ${schedule.dataFim || 'N/A'}
+                        </span>
+                        <span style="font-size:11px;color:var(--text-secondary);margin-left:10px;">
+                            📅 ${tarefasHoje.length} tarefas hoje (${dataAtual})
+                        </span>
+                    </div>
+                    ${isAdmin ? `
+                        <button class="btn btn-small btn-success" onclick="openAddActivityModal()">
+                            ➕ Adicionar Atividade
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;">
+                    <input type="date" id="schedule-data-view" value="${dataAtual}" 
+                           onchange="changeScheduleDate('${scheduleId}', '${view}')"
+                           style="max-width:200px;">
+                    <button class="btn btn-small btn-primary" onclick="changeScheduleDate('${scheduleId}', '${view}')">
+                        🔄 Atualizar
+                    </button>
+                </div>
+                
+                <div style="overflow-x:auto;">
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width:60px;">HORÁRIO</th>
+                                <th>Atividades de ${dataAtual}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        HORARIOS_PADRAO.forEach(hora => {
+            const tarefa = tarefasMap[`${dataAtual}_${hora}`];
+            const hasTarefa = tarefa && tarefa.name;
+            
+            html += `<tr>
+                <td class="hour-cell">${hora}</td>
+                <td class="activity-cell ${hasTarefa ? 'has-activity ' + (tarefa.cor || '') : ''}" 
+                    data-hora="${hora}"
+                    onclick="${isAdmin ? `handleCellClick('${dataAtual}', '${hora}')` : ''}">
+                    ${hasTarefa ? `
+                        <div class="activity-wrapper">
+                            <div class="activity-name">${tarefa.name}</div>
+                            ${tarefa.descricao ? `<div class="activity-subject">${tarefa.descricao}</div>` : ''}
+                            ${tarefa.status ? `<div class="badge ${tarefa.status === 'Realizado' ? 'badge-done' : tarefa.status === 'Em Andamento' ? 'badge-doing' : tarefa.status === 'Não Feito' ? 'badge-notdone' : 'badge-pending'}" style="font-size:8px;margin-top:4px;">${tarefa.status}</div>` : ''}
+                            ${isAluno ? `
+                                <div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;">
+                                    ${tarefa.status !== 'Não Feito' ? `
+                                        <button class="btn btn-small btn-success" onclick="updateTaskFromSchedule('${tarefa.id}', 'Realizado')" style="padding:2px 6px;font-size:8px;">✅</button>
+                                        <button class="btn btn-small btn-warning" onclick="updateTaskFromSchedule('${tarefa.id}', 'Em Andamento')" style="padding:2px 6px;font-size:8px;">🔄</button>
+                                        <button class="btn btn-small btn-danger" onclick="marcarNaoFeitoSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">❌</button>
+                                    ` : `
+                                        <button class="btn btn-small btn-success" onclick="recuperarTarefaSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">🔄 Recuperar</button>
+                                    `}
+                                </div>
+                            ` : ''}
+                            ${isAdmin ? `
+                                <button class="delete-activity" onclick="event.stopPropagation(); removeActivitySchedule('${dataAtual}', '${hora}')">×</button>
+                            ` : ''}
                         </div>
-                    `;
-                }).join('')}
+                    ` : (isAdmin && isEditMode ? `
+                        <div class="empty-cell">Clique para adicionar</div>
+                    ` : '')}
+                </td>
+            </tr>`;
+        });
+
+        html += `
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
+
+        container.innerHTML = html;
+
     } catch (error) {
-        console.error('Erro ao carregar logs:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar logs</p>';
+        console.error('Erro ao renderizar grade:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar grade: ' + error.message + '</p>';
     }
+}
+
+async function changeScheduleDate(scheduleId, view) {
+    await renderScheduleGrid(scheduleId, view);
+}
+
+// ============================================================
+// 📝 FUNÇÕES DE ATIVIDADES
+// ============================================================
+
+function openAddActivityModal() {
+    if (!isEditMode) {
+        showToast('ℹ️ Ative o modo de edição para adicionar atividades', 'info');
+        return;
+    }
+    if (!selectedCell) {
+        showToast('ℹ️ Clique em uma célula primeiro', 'info');
+        return;
+    }
+    
+    document.getElementById('activity-dia').textContent = selectedCell.dia || selectedCell.data;
+    document.getElementById('activity-hora').textContent = selectedCell.hora;
+    document.getElementById('activity-modal').classList.remove('hidden');
+}
+
+async function handleCellClick(data, hora) {
+    if (!isEditMode) {
+        showToast('ℹ️ Ative o modo de edição para modificar', 'info');
+        return;
+    }
+
+    selectedCell = { data, hora };
+    openAddActivityModal();
+}
+
+async function addActivity() {
+    const nome = document.getElementById('activity-nome').value.trim();
+    const materia = document.getElementById('activity-materia').value.trim();
+    const descricao = document.getElementById('activity-descricao').value.trim();
+
+    if (!selectedCell) {
+        showToast('⚠️ Selecione uma célula!', 'warning');
+        return;
+    }
+
+    if (!nome) {
+        showToast('⚠️ Digite o nome da atividade!', 'warning');
+        return;
+    }
+
+    try {
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        if (!alunoId) {
+            showToast('⚠️ Selecione um aluno primeiro!', 'warning');
+            return;
+        }
+
+        // Buscar o schedule atual
+        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
+        
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const schedules = Array.isArray(data) ? data : [];
+        const schedule = schedules.find(s => s.id === currentScheduleId);
+
+        if (!schedule) {
+            showToast('❌ Horário não encontrado', 'error');
+            return;
+        }
+
+        // Atualizar as atividades do schedule
+        const atividades = schedule.atividades || {};
+        const { data: dataAtual, hora } = selectedCell;
+        
+        // Criar a atividade
+        const atividadeData = {
+            nome: nome,
+            materia: materia || '',
+            descricao: descricao || '',
+            cor: modalSelectedColor || 'activity-color-1'
+        };
+
+        // Salvar no schedule
+        await fetch(`${API_URL}/schedules/${currentScheduleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                nome: schedule.nome || 'Horário',
+                dataInicio: schedule.dataInicio || '',
+                dataFim: schedule.dataFim || '',
+                diasSemana: schedule.diasSemana || [],
+                atividades: atividades
+            })
+        });
+
+        // ====== CRIAR TAREFA PARA ESTA DATA/HORA ======
+        const horaParts = hora.split(':');
+        const horaInicio = parseInt(horaParts[0]);
+        const horaFim = horaInicio + 1;
+        const timeEnd = `${String(horaFim).padStart(2, '0')}:${horaParts[1] || '00'}`;
+        
+        const taskName = materia ? `${nome} - ${materia}` : nome;
+
+        const taskResponse = await fetch(`${API_URL}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                alunoId: alunoId,
+                data: dataAtual,
+                timeStart: hora,
+                timeEnd: timeEnd,
+                name: taskName,
+                scheduleId: currentScheduleId,
+                descricao: descricao || '',
+                cor: modalSelectedColor || 'activity-color-1'
+            })
+        });
+
+        if (!taskResponse.ok) {
+            const error = await taskResponse.json();
+            console.warn('⚠️ Tarefa criada com aviso:', error);
+        } else {
+            const task = await taskResponse.json();
+            console.log('✅ Tarefa criada:', task);
+            showToast('✅ Atividade adicionada e tarefa criada!', 'success');
+        }
+
+        closeActivityModal();
+        await renderScheduleGrid(currentScheduleId, 'adm');
+        
+    } catch (error) {
+        console.error('❌ Erro ao adicionar atividade:', error);
+        showToast('❌ Erro ao adicionar atividade: ' + error.message, 'error');
+    }
+}
+
+async function removeActivitySchedule(data, hora) {
+    if (!confirm(`Remover atividade de ${data} às ${hora}?`)) return;
+
+    try {
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        if (!alunoId) {
+            showToast('⚠️ Selecione um aluno primeiro!', 'warning');
+            return;
+        }
+
+        // Buscar e deletar a tarefa
+        const tasksResponse = await fetch(`${API_URL}/tasks/aluno/${alunoId}`);
+        const tasks = await tasksResponse.json();
+        const taskToDelete = tasks.find(t => t.data === data && t.timeStart === hora && t.scheduleId === currentScheduleId);
+
+        if (taskToDelete) {
+            await fetch(`${API_URL}/tasks/${taskToDelete.id}`, { method: 'DELETE' });
+        }
+
+        await renderScheduleGrid(currentScheduleId, 'adm');
+        showToast('🗑️ Atividade removida', 'info');
+
+    } catch (error) {
+        console.error('Erro ao remover atividade:', error);
+        showToast('❌ Erro ao remover atividade: ' + error.message, 'error');
+    }
+}
+
+function closeActivityModal() {
+    document.getElementById('activity-modal').classList.add('hidden');
+    document.getElementById('activity-nome').value = '';
+    document.getElementById('activity-materia').value = '';
+    document.getElementById('activity-descricao').value = '';
+    selectedCell = null;
+    modalSelectedColor = 'activity-color-1';
+    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
+        el.classList.toggle('selected', el.className.includes('activity-color-1'));
+    });
+}
+
+// ============================================================
+// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE
+// ============================================================
+
+async function updateTaskFromSchedule(taskId, newStatus) {
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
+    
+    try {
+        isUpdating = true;
+        const taskIdStr = String(taskId);
+        
+        console.log(`🔄 Atualizando tarefa ${taskIdStr} para "${newStatus}" via grade`);
+        
+        showToast('⏳ Atualizando status...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                status: newStatus, 
+                justification: '',
+                alunoId: currentUser.id 
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar status');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Resposta:', data);
+        
+        if (data.success) {
+            await loadAlunoData();
+            updateAlunoXP();
+            await checkAchievements();
+            
+            if (currentScheduleId) {
+                await renderScheduleGrid(currentScheduleId, 'aluno');
+            }
+            
+            if (data.xpGanho > 0) {
+                showToast(`✅ +${data.xpGanho} XP!`, 'success');
+            } else {
+                showToast(`✅ Status: ${newStatus}`, 'success');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        showToast('❌ ' + error.message, 'error');
+    } finally {
+        isUpdating = false;
+    }
+}
+
+// ============================================================
+// 📝 FUNÇÕES PARA NÃO FEITO E RECUPERAR
+// ============================================================
+
+let pendingScheduleTaskId = null;
+
+async function marcarNaoFeitoSchedule(taskId) {
+    pendingScheduleTaskId = taskId;
+    document.getElementById('justify-text').value = '';
+    document.getElementById('justify-modal').classList.remove('hidden');
+}
+
+async function confirmNotDone() {
+    const taskId = pendingTaskId || pendingScheduleTaskId;
+    if (!taskId) return;
+    
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
+    
+    const justification = document.getElementById('justify-text').value.trim();
+    if (!justification) {
+        showToast('⚠️ A justificativa é obrigatória!', 'warning');
+        return;
+    }
+    
+    try {
+        isUpdating = true;
+        const taskIdStr = String(taskId);
+        console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
+        
+        showToast('⏳ Atualizando...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                status: 'Não Feito', 
+                justification: justification,
+                alunoId: currentUser.id 
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar status');
+        }
+        
+        await loadAlunoData();
+        updateAlunoXP();
+        
+        if (currentScheduleId) {
+            await renderScheduleGrid(currentScheduleId, 'aluno');
+        }
+        
+        showToast('📝 Tarefa marcada como Não Feito', 'info');
+        
+    } catch (error) {
+        console.error('❌ Erro ao marcar como não feito:', error);
+        showToast('❌ ' + error.message, 'error');
+    } finally {
+        isUpdating = false;
+        closeJustifyModal();
+        pendingTaskId = null;
+        pendingScheduleTaskId = null;
+    }
+}
+
+function closeJustifyModal() {
+    document.getElementById('justify-modal').classList.add('hidden');
+    pendingTaskId = null;
+    pendingScheduleTaskId = null;
+}
+
+async function recuperarTarefaSchedule(taskId) {
+    pendingScheduleTaskId = taskId;
+    document.getElementById('recover-text').value = '';
+    document.getElementById('recover-modal').classList.remove('hidden');
+}
+
+async function confirmRecover() {
+    const taskId = pendingTaskId || pendingScheduleTaskId;
+    if (!taskId) return;
+    
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
+    
+    const justification = document.getElementById('recover-text').value.trim();
+    if (!justification) {
+        showToast('⚠️ A justificativa é obrigatória para recuperar!', 'warning');
+        return;
+    }
+    
+    try {
+        isUpdating = true;
+        const taskIdStr = String(taskId);
+        console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
+        
+        showToast('⏳ Recuperando tarefa...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                status: 'Realizado', 
+                justification: justification,
+                alunoId: currentUser.id 
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao recuperar tarefa');
+        }
+        
+        await loadAlunoData();
+        updateAlunoXP();
+        await checkAchievements();
+        
+        if (currentScheduleId) {
+            await renderScheduleGrid(currentScheduleId, 'aluno');
+        }
+        
+        showToast('🔄 Tarefa recuperada! +25 XP', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao recuperar tarefa:', error);
+        showToast('❌ ' + error.message, 'error');
+    } finally {
+        isUpdating = false;
+        closeRecoverModal();
+        pendingTaskId = null;
+        pendingScheduleTaskId = null;
+    }
+}
+
+function closeRecoverModal() {
+    document.getElementById('recover-modal').classList.add('hidden');
+    pendingTaskId = null;
+    pendingScheduleTaskId = null;
 }
 
 // ============================================================
 // 🎒 FUNÇÕES DO ALUNO
 // ============================================================
+
 let alunoData = {};
 
 async function setupAlunoView() {
@@ -1568,767 +2128,16 @@ async function checkAchievements() {
     }
 }
 
-async function renderWeekOverview() {
-    const container = document.getElementById('week-overview');
-    const days = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
-    const dayNames = { segunda:'Seg', terca:'Ter', quarta:'Qua', quinta:'Qui', sexta:'Sex' };
-    const today = getTodayDay();
-    
-    try {
-        const response = await fetch(`${API_URL}/tasks/aluno/${currentUser.id}`);
-        const tasks = await response.json();
-        console.log('📋 Tarefas carregadas:', tasks);
-        
-        container.innerHTML = days.map(day => {
-            const dayTasks = tasks.filter(t => t.day === day);
-            const isToday = day === today;
-            const doneCount = dayTasks.filter(t => t.status === 'Realizado').length;
-            const notDoneCount = dayTasks.filter(t => t.status === 'Não Feito').length;
-            const pendingCount = dayTasks.filter(t => t.status === 'Pendente').length;
-            
-            return `
-                <div class="day-card ${isToday ? 'today' : ''}" onclick="selectDay('${day}')">
-                    <span class="day-name">${dayNames[day]}</span>
-                    ${dayTasks.length > 0 ? `
-                        <span class="task-count">
-                            ${doneCount}/${dayTasks.length} ✅
-                            ${notDoneCount > 0 ? ` ${notDoneCount}❌` : ''}
-                            ${pendingCount > 0 ? ` ${pendingCount}⏳` : ''}
-                        </span>
-                    ` : `
-                        <span class="task-count" style="color:var(--text-secondary);">Sem tarefas</span>
-                    `}
-                    ${isToday ? '<span style="font-size:10px;color:var(--accent-purple);">HOJE</span>' : ''}
-                </div>
-            `;
-        }).join('');
-        
-        if (!selectedDay) {
-            selectDay(today);
-        }
-    } catch (error) {
-        console.error('Erro ao carregar agenda:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar agenda</p>';
-    }
-}
-
-function getTodayDay() {
-    const dayNum = new Date().getDay();
-    const map = { 1:'segunda', 2:'terca', 3:'quarta', 4:'quinta', 5:'sexta' };
-    return map[dayNum] || 'segunda';
-}
-
-async function selectDay(day) {
-    selectedDay = day;
-    const dayNames = { segunda:'Segunda-feira', terca:'Terça-feira', quarta:'Quarta-feira', quinta:'Quinta-feira', sexta:'Sexta-feira' };
-    document.getElementById('selected-day-title').textContent = `📌 Tarefas de ${dayNames[day]}`;
-    await renderAlunoTasksByDay(day);
-}
-
-// ============================================================
-// 🎯 RENDERIZAR TAREFAS DO ALUNO
-// ============================================================
-
-async function renderAlunoTasksByDay(day) {
-    const container = document.getElementById('aluno-tasks-display');
-    
-    try {
-        const response = await fetch(`${API_URL}/tasks/aluno/${currentUser.id}`);
-        const allTasks = await response.json();
-        const tasks = allTasks.filter(t => t.day === day);
-        
-        console.log(`📋 Tarefas encontradas para ${day}:`, tasks);
-        
-        if (tasks.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa cadastrada para este dia</p>';
-            return;
-        }
-        
-        const statusBadges = {
-            'Pendente': 'badge-pending',
-            'Em Andamento': 'badge-doing',
-            'Realizado': 'badge-done',
-            'Não Feito': 'badge-notdone'
-        };
-        
-        tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
-        
-        container.innerHTML = tasks.map(t => {
-            const taskId = String(t.id);
-            
-            return `
-                <div class="task-item slide-in" id="task-${taskId}">
-                    <div class="task-info">
-                        <span class="task-time">🕐 ${t.timeStart} - ${t.timeEnd}</span>
-                        <strong>${t.name}</strong>
-                        <br>
-                        <span class="badge ${statusBadges[t.status] || 'badge-pending'}" id="status-badge-${taskId}">${t.status || 'Pendente'}</span>
-                        ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
-                        ${t.status === 'Não Feito' ? '<br><small style="color:var(--accent-orange);">⚠️ Requer justificativa para alterar</small>' : ''}
-                    </div>
-                    <div class="task-actions">
-                        ${t.status !== 'Não Feito' ? `
-                            <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus('${taskId}', 'Realizado')" id="btn-done-${taskId}">
-                                ✅
-                            </button>
-                            <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus('${taskId}', 'Em Andamento')" id="btn-doing-${taskId}">
-                                🔄
-                            </button>
-                            <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone('${taskId}')" id="btn-notdone-${taskId}">
-                                ❌
-                            </button>
-                        ` : `
-                            <button class="btn btn-small btn-success" onclick="alunoRecoverTask('${taskId}')" id="btn-recover-${taskId}">
-                                🔄 Recuperar
-                            </button>
-                        `}
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-    } catch (error) {
-        console.error('Erro ao carregar tarefas:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar tarefas</p>';
-    }
-}
-
-// ============================================================
-// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS
-// ============================================================
-
-async function alunoUpdateTaskStatus(taskId, newStatus) {
-    if (isUpdating) {
-        showToast('⏳ Aguarde, processando...', 'warning');
-        return;
-    }
-    
-    try {
-        isUpdating = true;
-        const taskIdStr = String(taskId);
-        
-        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
-        
-        const taskElement = document.getElementById(`task-${taskIdStr}`);
-        if (taskElement) {
-            const buttons = taskElement.querySelectorAll('.btn');
-            buttons.forEach(btn => btn.disabled = true);
-        }
-        
-        showToast('⏳ Atualizando status...', 'info');
-        
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: newStatus, 
-                justification: '',
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = 'Erro ao atualizar status';
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.error || errorMessage;
-            } catch (e) {
-                errorMessage = errorText || errorMessage;
-            }
-            throw new Error(errorMessage);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Resposta do servidor:', data);
-        
-        if (data.success) {
-            await loadAlunoData();
-            updateAlunoXP();
-            await checkAchievements();
-            await renderAlunoTasksByDay(selectedDay);
-            
-            if (data.xpGanho > 0) {
-                showToast(`✅ Status atualizado! +${data.xpGanho} XP ⚡`, 'success');
-            } else {
-                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
-            }
-        } else {
-            throw new Error(data.message || 'Erro ao atualizar status');
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro ao atualizar status:', error);
-        showToast('❌ ' + error.message, 'error');
-        
-        const taskIdStr = String(taskId);
-        const taskElement = document.getElementById(`task-${taskIdStr}`);
-        if (taskElement) {
-            const buttons = taskElement.querySelectorAll('.btn');
-            buttons.forEach(btn => btn.disabled = false);
-        }
-    } finally {
-        isUpdating = false;
-    }
-}
-
-// ============================================================
-// FUNÇÃO PARA MARCAR COMO NÃO FEITO
-// ============================================================
-
-function alunoMarkNotDone(taskId) {
-    pendingTaskId = String(taskId);
-    document.getElementById('justify-text').value = '';
-    document.getElementById('justify-modal').classList.remove('hidden');
-}
-
-async function confirmNotDone() {
-    if (!pendingTaskId) return;
-    if (isUpdating) {
-        showToast('⏳ Aguarde, processando...', 'warning');
-        return;
-    }
-    
-    const justification = document.getElementById('justify-text').value.trim();
-    if (!justification) {
-        showToast('⚠️ A justificativa é obrigatória!', 'warning');
-        return;
-    }
-    
-    try {
-        isUpdating = true;
-        const taskIdStr = String(pendingTaskId);
-        console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
-        
-        showToast('⏳ Atualizando...', 'info');
-        
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: 'Não Feito', 
-                justification: justification,
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar status');
-        }
-        
-        await loadAlunoData();
-        updateAlunoXP();
-        await renderAlunoTasksByDay(selectedDay);
-        
-        showToast('📝 Tarefa marcada como Não Feito', 'info');
-        
-    } catch (error) {
-        console.error('❌ Erro ao marcar como não feito:', error);
-        showToast('❌ ' + error.message, 'error');
-    } finally {
-        isUpdating = false;
-        closeJustifyModal();
-    }
-}
-
-function closeJustifyModal() {
-    document.getElementById('justify-modal').classList.add('hidden');
-    pendingTaskId = null;
-}
-
-// ============================================================
-// FUNÇÃO PARA RECUPERAR TAREFA
-// ============================================================
-
-function alunoRecoverTask(taskId) {
-    pendingTaskId = String(taskId);
-    document.getElementById('recover-text').value = '';
-    document.getElementById('recover-modal').classList.remove('hidden');
-}
-
-async function confirmRecover() {
-    if (!pendingTaskId) return;
-    if (isUpdating) {
-        showToast('⏳ Aguarde, processando...', 'warning');
-        return;
-    }
-    
-    const justification = document.getElementById('recover-text').value.trim();
-    if (!justification) {
-        showToast('⚠️ A justificativa é obrigatória para recuperar!', 'warning');
-        return;
-    }
-    
-    try {
-        isUpdating = true;
-        const taskIdStr = String(pendingTaskId);
-        console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
-        
-        showToast('⏳ Recuperando tarefa...', 'info');
-        
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: 'Realizado', 
-                justification: justification,
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao recuperar tarefa');
-        }
-        
-        await loadAlunoData();
-        updateAlunoXP();
-        await checkAchievements();
-        await renderAlunoTasksByDay(selectedDay);
-        
-        showToast('🔄 Tarefa recuperada! +25 XP', 'success');
-        
-    } catch (error) {
-        console.error('❌ Erro ao recuperar tarefa:', error);
-        showToast('❌ ' + error.message, 'error');
-    } finally {
-        isUpdating = false;
-        closeRecoverModal();
-    }
-}
-
-function closeRecoverModal() {
-    document.getElementById('recover-modal').classList.add('hidden');
-    pendingTaskId = null;
-}
-
-// ============================================================
-// 📅 SISTEMA DE HORÁRIOS
-// ============================================================
-
-// ============ FUNÇÕES DO ADM ============
-
-async function admLoadSchedules() {
-    try {
-        const alunoId = document.getElementById('adm-schedule-aluno').value;
-        if (!alunoId) {
-            document.getElementById('adm-schedules-list').innerHTML = 
-                '<p style="color:var(--text-secondary);">Selecione um aluno</p>';
-            return;
-        }
-
-        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
-        const schedules = await response.json();
-
-        const container = document.getElementById('adm-schedules-list');
-        
-        if (schedules.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum horário criado</p>';
-            return;
-        }
-
-        container.innerHTML = schedules.map(s => `
-            <div class="schedule-item ${s.id === currentScheduleId ? 'active' : ''}" 
-                 onclick="admSelectSchedule('${s.id}')">
-                <span class="schedule-name">📋 ${s.nome}</span>
-                <span class="schedule-date">${s.created_at || ''}</span>
-                <span class="schedule-badge">${Object.keys(s.dias || {}).length} dias</span>
-                <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); admDeleteSchedule('${s.id}')">🗑️</button>
-            </div>
-        `).join('');
-
-        if (schedules.length > 0 && !currentScheduleId) {
-            admSelectSchedule(schedules[0].id);
-        } else if (schedules.length > 0 && currentScheduleId) {
-            // Verificar se o schedule atual ainda existe
-            const exists = schedules.some(s => s.id === currentScheduleId);
-            if (!exists) {
-                admSelectSchedule(schedules[0].id);
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao carregar horários:', error);
-    }
-}
-
-async function admCreateSchedule() {
-    const alunoId = document.getElementById('adm-schedule-aluno').value;
-    const nome = document.getElementById('adm-schedule-name').value.trim();
-
-    if (!alunoId) {
-        showToast('⚠️ Selecione um aluno!', 'warning');
-        return;
-    }
-    if (!nome) {
-        showToast('⚠️ Digite um nome para o horário!', 'warning');
-        return;
-    }
-
-    try {
-        const dias = {};
-        DIAS_SEMANA.forEach(dia => {
-            dias[dia] = {};
-            HORARIOS_PADRAO.forEach(hora => {
-                dias[dia][hora] = null;
-            });
-        });
-
-        const response = await fetch(`${API_URL}/schedules`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ alunoId, nome, dias })
-        });
-
-        const schedule = await response.json();
-        document.getElementById('adm-schedule-name').value = '';
-        await admLoadSchedules();
-        admSelectSchedule(schedule.id);
-        showToast('✅ Horário criado com sucesso!', 'success');
-    } catch (error) {
-        console.error('Erro ao criar horário:', error);
-        showToast('❌ Erro ao criar horário', 'error');
-    }
-}
-
-async function admSelectSchedule(scheduleId) {
-    currentScheduleId = scheduleId;
-    await admLoadSchedules();
-    await renderScheduleGrid(scheduleId, 'adm');
-}
-
-async function admDeleteSchedule(scheduleId) {
-    if (!confirm('Deseja realmente excluir este horário?')) return;
-
-    try {
-        await fetch(`${API_URL}/schedules/${scheduleId}`, { method: 'DELETE' });
-        currentScheduleId = null;
-        await admLoadSchedules();
-        document.getElementById('adm-schedule-display').innerHTML = 
-            '<p style="color:var(--text-secondary);">Selecione ou crie um horário para editar</p>';
-        showToast('🗑️ Horário excluído', 'info');
-    } catch (error) {
-        console.error('Erro ao deletar horário:', error);
-        showToast('❌ Erro ao deletar horário', 'error');
-    }
-}
-
-function toggleEditMode() {
-    isEditMode = !isEditMode;
-    const toggle = document.getElementById('edit-toggle');
-    const label = document.getElementById('edit-mode-label');
-    
-    toggle.classList.toggle('active', isEditMode);
-    label.textContent = isEditMode ? 'Ativado' : 'Desativado';
-    
-    if (currentScheduleId) {
-        renderScheduleGrid(currentScheduleId, 'adm');
-    }
-}
-
-function selectModalColor(colorId) {
-    modalSelectedColor = colorId;
-    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
-        el.classList.toggle('selected', el.className.includes(colorId));
-    });
-}
-// ============================================================
-// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE
-// ============================================================
-
-async function updateTaskFromSchedule(taskId, newStatus) {
-    if (isUpdating) {
-        showToast('⏳ Aguarde, processando...', 'warning');
-        return;
-    }
-    
-    try {
-        isUpdating = true;
-        const taskIdStr = String(taskId);
-        
-        console.log(`🔄 Atualizando tarefa ${taskIdStr} para "${newStatus}" via grade`);
-        
-        showToast('⏳ Atualizando status...', 'info');
-        
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: newStatus, 
-                justification: '',
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar status');
-        }
-        
-        const data = await response.json();
-        console.log('✅ Resposta:', data);
-        
-        if (data.success) {
-            await loadAlunoData();
-            updateAlunoXP();
-            await checkAchievements();
-            
-            // Recarregar grade e tarefas
-            if (currentScheduleId) {
-                await renderScheduleGrid(currentScheduleId, 'aluno');
-            }
-            await renderAlunoTasksByDay(selectedDay);
-            
-            if (data.xpGanho > 0) {
-                showToast(`✅ +${data.xpGanho} XP!`, 'success');
-            } else {
-                showToast(`✅ Status: ${newStatus}`, 'success');
-            }
-        }
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        showToast('❌ ' + error.message, 'error');
-    } finally {
-        isUpdating = false;
-    }
-}    
-
-// ============ RENDERIZAR GRADE HORÁRIA ============
-
-async function renderScheduleGrid(scheduleId, view = 'adm') {
-    const container = document.getElementById(
-        view === 'adm' ? 'adm-schedule-display' : 'aluno-schedule-display'
-    );
-
-    try {
-        // Buscar o schedule específico
-        let schedules = [];
-        if (view === 'adm') {
-            const alunoId = document.getElementById('adm-schedule-aluno').value;
-            if (!alunoId) {
-                container.innerHTML = '<p style="color:var(--text-secondary);">Selecione um aluno primeiro</p>';
-                return;
-            }
-            const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
-            schedules = await response.json();
-        } else {
-            const response = await fetch(`${API_URL}/schedules/aluno/${currentUser.id}`);
-            schedules = await response.json();
-        }
-
-        const schedule = schedules.find(s => s.id === scheduleId);
-
-        if (!schedule) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">Horário não encontrado</p>';
-            return;
-        }
-
-        const dias = schedule.dias || {};
-        const isAdmin = view === 'adm';
-
-        let html = `
-            <div class="schedule-container">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
-                    <div>
-                        <h4 style="color:var(--accent-blue);font-size:16px;">${schedule.nome}</h4>
-                        <span style="font-size:11px;color:var(--text-secondary);">Criado em: ${schedule.created_at || 'N/A'}</span>
-                    </div>
-                    ${isAdmin ? `
-                        <button class="btn btn-small btn-success" onclick="openAddActivityModal()">
-                            ➕ Adicionar Atividade
-                        </button>
-                    ` : ''}
-                </div>
-                <table class="schedule-table">
-                    <thead>
-                        <tr>
-                            <th style="min-width:60px;">HORÁRIO</th>
-                            ${DIAS_SEMANA.map(dia => `<th>${dia}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        HORARIOS_PADRAO.forEach(hora => {
-            html += `<tr><td class="hour-cell">${hora}</td>`;
-            
-            DIAS_SEMANA.forEach(dia => {
-                const activity = dias[dia] && dias[dia][hora];
-                const hasActivity = activity && activity.nome;
-                const colorClass = activity && activity.cor ? activity.cor : '';
-                
-                html += `
-                    <td class="activity-cell ${hasActivity ? 'has-activity ' + colorClass : ''}" 
-                        data-dia="${dia}" 
-                        data-hora="${hora}"
-                        onclick="${isAdmin ? `handleCellClick('${dia}', '${hora}')` : ''}"
-                        style="${hasActivity ? '' : 'cursor:default;'}">
-                        ${hasActivity ? `
-                            <div class="activity-wrapper">
-                                <div class="activity-name">${activity.nome}</div>
-                                ${activity.materia ? `<div class="activity-subject">${activity.materia}</div>` : ''}
-                                ${activity.descricao ? `<div class="activity-subject" style="font-size:8px;opacity:0.7;">${activity.descricao}</div>` : ''}
-                                ${isAdmin ? `
-                                    <button class="delete-activity" onclick="event.stopPropagation(); removeActivity('${dia}', '${hora}')">×</button>
-                                ` : ''}
-                            </div>
-                        ` : (isAdmin && isEditMode ? `
-                            <div class="empty-cell">Clique para adicionar</div>
-                        ` : '')}
-                    </td>
-                `;
-            });
-            
-            html += `</tr>`;
-        });
-
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        container.innerHTML = html;
-
-    } catch (error) {
-        console.error('Erro ao renderizar grade:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar grade</p>';
-    }
-}
-
-// ============ FUNÇÕES DE EDIÇÃO ============
-
-function openAddActivityModal() {
-    if (!isEditMode) {
-        showToast('ℹ️ Ative o modo de edição para adicionar atividades', 'info');
-        return;
-    }
-    if (!selectedCell) {
-        showToast('ℹ️ Clique em uma célula primeiro', 'info');
-        return;
-    }
-    
-    document.getElementById('activity-dia').textContent = selectedCell.dia;
-    document.getElementById('activity-hora').textContent = selectedCell.hora;
-    document.getElementById('activity-modal').classList.remove('hidden');
-}
-
-async function handleCellClick(dia, hora) {
-    if (!isEditMode) {
-        showToast('ℹ️ Ative o modo de edição para modificar', 'info');
-        return;
-    }
-
-    selectedCell = { dia, hora };
-    openAddActivityModal();
-}
-
-async function addActivity() {
-    const nome = document.getElementById('activity-nome').value.trim();
-    const materia = document.getElementById('activity-materia').value.trim();
-    const descricao = document.getElementById('activity-descricao').value.trim();
-
-    if (!selectedCell) {
-        showToast('⚠️ Selecione uma célula!', 'warning');
-        return;
-    }
-
-    if (!nome) {
-        showToast('⚠️ Digite o nome da atividade!', 'warning');
-        return;
-    }
-
-    try {
-        const alunoId = document.getElementById('adm-schedule-aluno').value;
-        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
-        const schedules = await response.json();
-        const schedule = schedules.find(s => s.id === currentScheduleId);
-
-        if (!schedule) {
-            showToast('❌ Horário não encontrado', 'error');
-            return;
-        }
-
-        const dias = schedule.dias || {};
-        const { dia, hora } = selectedCell;
-        
-        if (!dias[dia]) dias[dia] = {};
-        
-        dias[dia][hora] = {
-            nome,
-            materia: materia || '',
-            descricao: descricao || '',
-            cor: modalSelectedColor
-        };
-
-        await fetch(`${API_URL}/schedules/${currentScheduleId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: schedule.nome, dias })
-        });
-
-        closeActivityModal();
-        await renderScheduleGrid(currentScheduleId, 'adm');
-        showToast('✅ Atividade adicionada!', 'success');
-
-    } catch (error) {
-        console.error('Erro ao adicionar atividade:', error);
-        showToast('❌ Erro ao adicionar atividade', 'error');
-    }
-}
-
-async function removeActivity(dia, hora) {
-    if (!confirm(`Remover atividade de ${dia} às ${hora}?`)) return;
-
-    try {
-        const alunoId = document.getElementById('adm-schedule-aluno').value;
-        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
-        const schedules = await response.json();
-        const schedule = schedules.find(s => s.id === currentScheduleId);
-
-        if (!schedule) {
-            showToast('❌ Horário não encontrado', 'error');
-            return;
-        }
-
-        const dias = schedule.dias || {};
-        if (dias[dia] && dias[dia][hora]) {
-            dias[dia][hora] = null;
-        }
-
-        await fetch(`${API_URL}/schedules/${currentScheduleId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: schedule.nome, dias })
-        });
-
-        await renderScheduleGrid(currentScheduleId, 'adm');
-        showToast('🗑️ Atividade removida', 'info');
-
-    } catch (error) {
-        console.error('Erro ao remover atividade:', error);
-        showToast('❌ Erro ao remover atividade', 'error');
-    }
-}
-
-function closeActivityModal() {
-    document.getElementById('activity-modal').classList.add('hidden');
-    document.getElementById('activity-nome').value = '';
-    document.getElementById('activity-materia').value = '';
-    document.getElementById('activity-descricao').value = '';
-    selectedCell = null;
-    modalSelectedColor = 'activity-color-1';
-    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
-        el.classList.toggle('selected', el.className.includes('activity-color-1'));
-    });
-}
-
-// ============ FUNÇÕES DO ALUNO ============
-
 async function alunoLoadSchedules() {
     try {
         const response = await fetch(`${API_URL}/schedules/aluno/${currentUser.id}`);
-        const schedules = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const schedules = Array.isArray(data) ? data : [];
 
         const container = document.getElementById('aluno-schedules-list');
         
@@ -2340,9 +2149,9 @@ async function alunoLoadSchedules() {
         container.innerHTML = schedules.map(s => `
             <div class="schedule-item ${s.id === currentScheduleId ? 'active' : ''}" 
                  onclick="alunoSelectSchedule('${s.id}')">
-                <span class="schedule-name">📋 ${s.nome}</span>
-                <span class="schedule-date">${s.created_at || ''}</span>
-                <span class="schedule-badge">${Object.keys(s.dias || {}).length} dias</span>
+                <span class="schedule-name">📋 ${s.nome || 'Sem nome'}</span>
+                <span class="schedule-date">${s.dataInicio || ''} → ${s.dataFim || ''}</span>
+                <span class="schedule-badge">${s.diasSemana ? s.diasSemana.length : 0} dias</span>
             </div>
         `).join('');
 
@@ -2351,17 +2160,23 @@ async function alunoLoadSchedules() {
         }
     } catch (error) {
         console.error('Erro ao carregar horários:', error);
+        document.getElementById('aluno-schedules-list').innerHTML = 
+            '<p style="color:var(--accent-red);">Erro ao carregar horários</p>';
     }
 }
 
 async function alunoSelectSchedule(scheduleId) {
+    if (!scheduleId) {
+        console.warn('⚠️ scheduleId vazio');
+        return;
+    }
     currentScheduleId = scheduleId;
     await alunoLoadSchedules();
     await renderScheduleGrid(scheduleId, 'aluno');
 }
 
 // ============================================================
-// FUNÇÕES DE DÚVIDAS
+// ❓ DÚVIDAS
 // ============================================================
 
 async function alunoSendQuestion() {
@@ -2425,28 +2240,39 @@ async function renderAlunoQuestions() {
 // ============================================================
 
 async function renderAll() {
+    if (isRendering) {
+        console.log('⏳ Renderização em andamento, ignorando...');
+        return;
+    }
+    
     if (!currentUser) return;
     
-    console.log('🔄 Renderizando...');
-    
-    if (currentUser.role === 'adm') {
-        await admRenderTasks();
-        await admRenderQuestions();
-        await admRenderActivityLog();
-        await updateAdmAlunosList();
-        await updateAdmSelects();
-        await updateAdmScheduleSelect();
-        await admLoadSchedules();
-    } else {
-        await renderWeekOverview();
-        if (selectedDay) {
-            await renderAlunoTasksByDay(selectedDay);
+    try {
+        isRendering = true;
+        console.log('🔄 Renderizando...');
+        
+        if (currentUser.role === 'adm') {
+            await admRenderTasks();
+            await admRenderQuestions();
+            await admRenderActivityLog();
+            await updateAdmAlunosList();
+            await updateAdmSelects();
+            await updateAdmScheduleSelect();
+            await admLoadSchedules();
+        } else {
+            await loadAlunoData();
+            updateAlunoXP();
+            await checkAchievements();
+            await alunoLoadSchedules();
+            if (currentScheduleId) {
+                await renderScheduleGrid(currentScheduleId, 'aluno');
+            }
+            await renderAlunoQuestions();
         }
-        await renderAlunoQuestions();
-        await loadAlunoData();
-        updateAlunoXP();
-        await checkAchievements();
-        await alunoLoadSchedules();
+    } catch (error) {
+        console.error('❌ Erro ao renderizar:', error);
+    } finally {
+        isRendering = false;
     }
 }
 
@@ -2476,8 +2302,6 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 500);
     }, 3000);
 }
-
-
 
 // ============================================================
 // 🚀 INICIALIZAÇÃO
