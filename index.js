@@ -580,7 +580,7 @@ app.get('/api/tasks/user/:userId', async (req, res) => {
   }
 });
 
-// ============ ATUALIZAR STATUS DA TAREFA (VERSÃO FINAL - CORRIGIDA) ============
+/// ============ ATUALIZAR STATUS DA TAREFA (VERSÃO DEFINITIVA) ============
 app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { taskId } = req.params;
   const { status, justification, alunoId } = req.body;
@@ -592,28 +592,58 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     console.log(`🔄 Atualizando tarefa - ID recebido: ${taskId}, ID limpo: ${taskIdClean}`);
     console.log(`📝 Status: ${status}, Aluno: ${alunoId}`);
     
-    // Buscar a tarefa SEMPRE como número, pois o Neo4j armazena como número
-    const taskIdNum = Number(taskIdClean);
+    // Tentar buscar a tarefa de várias formas
+    let checkResult = null;
     
-    if (isNaN(taskIdNum)) {
-      console.log(`❌ ID inválido: ${taskIdClean}`);
-      return res.status(400).json({ error: 'ID da tarefa inválido' });
+    // 1. Tentar como string (toString)
+    checkResult = await runQuery(
+      'MATCH (t:Task) WHERE toString(t.id) = $taskIdStr RETURN t',
+      { taskIdStr: taskIdClean }
+    );
+    
+    // 2. Se não encontrou, tentar como número
+    if (!checkResult || checkResult.records.length === 0) {
+      const taskIdNum = Number(taskIdClean);
+      if (!isNaN(taskIdNum)) {
+        console.log(`🔍 Tentando buscar como número: ${taskIdNum}`);
+        checkResult = await runQuery(
+          'MATCH (t:Task) WHERE t.id = $taskIdNum RETURN t',
+          { taskIdNum: taskIdNum }
+        );
+      }
     }
     
-    console.log(`🔍 Buscando tarefa com ID numérico: ${taskIdNum} (tipo: ${typeof taskIdNum})`);
-    
-    // Buscar a tarefa pelo ID numérico
-    const checkResult = await runQuery(
-      'MATCH (t:Task) WHERE t.id = $taskIdNum RETURN t',
-      { taskIdNum: taskIdNum }
-    );
+    // 3. Se ainda não encontrou, tentar buscar todos e filtrar no JavaScript
+    if (!checkResult || checkResult.records.length === 0) {
+      console.log(`🔍 Buscando todas as tarefas e filtrando...`);
+      const allTasksResult = await runQuery('MATCH (t:Task) RETURN t');
+      const allTasks = allTasksResult.records.map(r => r.get('t').properties);
+      
+      // Procurar pelo ID comparando como string
+      const foundTask = allTasks.find(t => String(t.id) === taskIdClean);
+      
+      if (foundTask) {
+        console.log(`✅ Tarefa encontrada via filtro: ${foundTask.name} (ID: ${foundTask.id})`);
+        // Criar um resultado falso para continuar o fluxo
+        checkResult = { records: [{ get: () => ({ properties: foundTask }) }] };
+      }
+    }
 
     if (!checkResult || checkResult.records.length === 0) {
-      console.log(`❌ Tarefa com ID ${taskIdNum} não encontrada`);
+      console.log(`❌ Tarefa ${taskId} não encontrada após todas as tentativas`);
       return res.status(404).json({ error: 'Tarefa não encontrada' });
     }
 
-    const task = checkResult.records[0].get('t').properties;
+    // Extrair a tarefa do resultado
+    let task;
+    if (checkResult.records[0].get('t')) {
+      task = checkResult.records[0].get('t').properties;
+    } else if (checkResult.records[0].properties) {
+      task = checkResult.records[0].properties;
+    } else {
+      task = checkResult.records[0];
+    }
+
     const oldStatus = task.status;
     const taskName = task.name;
     const taskRealId = task.id;
@@ -621,7 +651,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     console.log(`📝 Tarefa encontrada: ${taskName} (ID: ${taskRealId}, tipo: ${typeof taskRealId})`);
     console.log(`📝 Status antigo: ${oldStatus} → Novo: ${status}`);
 
-    // Atualizar o status
+    // Atualizar o status - usar o ID real da tarefa
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
@@ -720,7 +750,6 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar status da tarefa: ' + error.message });
   }
 });
-
 // Deletar tarefa
 app.delete('/api/tasks/:taskId', async (req, res) => {
   const { taskId } = req.params;
