@@ -62,14 +62,9 @@
             50% { transform: scale(1.2); color: var(--accent-gold); }
             100% { transform: scale(1); }
         }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
 
         .fade-in-up { animation: fadeInUp 0.5s ease-out; }
         .slide-in { animation: slideIn 0.4s ease-out; }
-        .slide-down { animation: slideDown 0.3s ease-out; }
 
         .app-container {
             max-width: 1400px;
@@ -127,6 +122,10 @@
         .user-name {
             font-weight: 600;
             font-size: 16px;
+        }
+        .user-role {
+            font-size: 12px;
+            color: var(--text-secondary);
         }
         .btn-logout {
             background: rgba(255,82,82,0.2);
@@ -637,7 +636,6 @@
             box-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
 
-        /* Estilos do calendário */
         .calendar-controls {
             display: flex;
             gap: 15px;
@@ -691,7 +689,6 @@
             color: white;
         }
 
-        /* Task item para listar tarefas */
         .task-item {
             background: var(--bg-input);
             border: 1px solid var(--border-color);
@@ -710,7 +707,6 @@
         .task-time { color: var(--accent-blue); font-weight: 700; }
         .task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
-        /* Question item */
         .question-item {
             background: var(--bg-input);
             border: 1px solid var(--border-color);
@@ -730,7 +726,6 @@
             border-radius: 0 8px 8px 0;
         }
 
-        /* Login */
         .login-container {
             max-width: 450px;
             margin: 80px auto;
@@ -770,7 +765,6 @@
         }
         .role-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
 
-        /* Relatório */
         .report-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -862,7 +856,7 @@
                 <span id="notification-area"></span>
                 <div class="user-avatar" id="user-avatar-display">?</div>
                 <span class="user-name" id="user-name-display"></span>
-                <span class="user-role" id="user-role-display" style="font-size:12px;color:var(--text-secondary);"></span>
+                <span class="user-role" id="user-role-display"></span>
                 <button class="btn-logout" onclick="logout()">🚪 Sair</button>
             </div>
         </header>
@@ -921,7 +915,7 @@
                 </button>
             </div>
 
-            <!-- Horários (acessível para adm e assessor) -->
+            <!-- Horários -->
             <div class="card mt-2">
                 <div class="card-title">📅 Gerenciar Horários</div>
                 
@@ -973,7 +967,7 @@
                 </div>
             </div>
 
-            <!-- Dúvidas dos alunos -->
+            <!-- Dúvidas -->
             <div class="card mt-2">
                 <div class="card-title">
                     💬 Dúvidas dos Alunos
@@ -995,7 +989,7 @@
                 </div>
             </div>
 
-            <!-- Lista de Tarefas com Filtros -->
+            <!-- Lista de Tarefas -->
             <div class="card mt-2">
                 <div class="card-title">📌 Lista de Tarefas</div>
                 <div class="schedule-controls">
@@ -1418,7 +1412,7 @@ async function admCadastrarAluno() {
         const response = await fetch(`${API_URL}/users/aluno`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, password, admId: currentUser.id })
+            body: JSON.stringify({ name, password, userId: currentUser.id })
         });
         
         if (!response.ok) {
@@ -1485,7 +1479,7 @@ async function admRemoverAluno(alunoId) {
         await fetch(`${API_URL}/users/aluno/${alunoId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ admId: currentUser.id })
+            body: JSON.stringify({ userId: currentUser.id })
         });
         
         await updateAdmAlunosList();
@@ -1503,7 +1497,6 @@ async function admRemoverAssessor(assessorId) {
     if (!confirm('Tem certeza que deseja remover este assessor?')) return;
     
     try {
-        // Buscar e remover vínculos do assessor
         await fetch(`${API_URL}/users/assessor/${assessorId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -1535,7 +1528,7 @@ async function admVincularAluno() {
         const response = await fetch(`${API_URL}/users/vincular`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ alunoId, assessorId })
+            body: JSON.stringify({ alunoId, assessorId, admId: currentUser.id })
         });
         
         if (!response.ok) {
@@ -2133,7 +2126,7 @@ function closeActivityModal() {
 }
 
 // ============================================================
-// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE (CORRIGIDO)
+// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE (VERSÃO CORRIGIDA)
 // ============================================================
 
 async function updateTaskFromSchedule(taskId, newStatus) {
@@ -2145,7 +2138,7 @@ async function updateTaskFromSchedule(taskId, newStatus) {
     try {
         isUpdating = true;
         
-        // Manter o ID como string para envio
+        // Remover decimais do ID
         const taskIdStr = String(taskId).split('.')[0];
         
         console.log(`🔄 Atualizando tarefa - ID: ${taskIdStr}`);
@@ -2153,7 +2146,6 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         
         showToast('⏳ Atualizando status...', 'info');
         
-        // Enviar o ID como string na URL
         const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -2177,7 +2169,7 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         }
         
         const data = await response.json();
-        console.log('✅ Resposta do servidor:', data);
+        console.log('✅ Resposta:', data);
         
         if (data.success) {
             await loadAlunoData();
@@ -2195,18 +2187,17 @@ async function updateTaskFromSchedule(taskId, newStatus) {
             if (data.xpGanho > 0) {
                 showToast(`✅ +${data.xpGanho} XP! 🎉`, 'success');
             } else {
-                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
+                showToast(`✅ Status: ${newStatus}`, 'success');
             }
-        } else {
-            throw new Error(data.message || 'Erro ao atualizar status');
         }
     } catch (error) {
-        console.error('❌ Erro ao atualizar status:', error);
+        console.error('❌ Erro:', error);
         showToast('❌ ' + error.message, 'error');
     } finally {
         isUpdating = false;
     }
 }
+
 // ============================================================
 // 📝 FUNÇÕES PARA NÃO FEITO E RECUPERAR (CORRIGIDAS)
 // ============================================================
@@ -2237,15 +2228,13 @@ async function confirmNotDone() {
     try {
         isUpdating = true;
         
-        // Limpar o ID
-        const taskIdClean = String(taskId).split('.')[0];
-        const taskIdNum = Number(taskIdClean);
+        const taskIdStr = String(taskId).split('.')[0];
         
-        console.log(`❌ Marcando tarefa ${taskIdNum} como Não Feito`);
+        console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
         
         showToast('⏳ Atualizando...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2274,7 +2263,7 @@ async function confirmNotDone() {
         showToast('📝 Tarefa marcada como Não Feito', 'info');
         
     } catch (error) {
-        console.error('❌ Erro ao marcar como não feito:', error);
+        console.error('❌ Erro:', error);
         showToast('❌ ' + error.message, 'error');
     } finally {
         isUpdating = false;
@@ -2314,15 +2303,13 @@ async function confirmRecover() {
     try {
         isUpdating = true;
         
-        // Limpar o ID
-        const taskIdClean = String(taskId).split('.')[0];
-        const taskIdNum = Number(taskIdClean);
+        const taskIdStr = String(taskId).split('.')[0];
         
-        console.log(`🔄 Recuperando tarefa ${taskIdNum}`);
+        console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
         
-        showToast('⏳ Recuperando tarefa...', 'info');
+        showToast('⏳ Recuperando...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2352,7 +2339,7 @@ async function confirmRecover() {
         showToast('🔄 Tarefa recuperada! +25 XP 🎉', 'success');
         
     } catch (error) {
-        console.error('❌ Erro ao recuperar tarefa:', error);
+        console.error('❌ Erro:', error);
         showToast('❌ ' + error.message, 'error');
     } finally {
         isUpdating = false;
@@ -2723,7 +2710,6 @@ async function admGerarRelatorio() {
         const modal = document.getElementById('report-modal');
         const content = document.getElementById('report-content');
         
-        // Estatísticas
         const stats = report.estatisticas;
         const aluno = report.aluno;
         
