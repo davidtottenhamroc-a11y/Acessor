@@ -2133,7 +2133,7 @@ function closeActivityModal() {
 }
 
 // ============================================================
-// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE
+// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE (CORRIGIDO)
 // ============================================================
 
 async function updateTaskFromSchedule(taskId, newStatus) {
@@ -2144,7 +2144,11 @@ async function updateTaskFromSchedule(taskId, newStatus) {
     
     try {
         isUpdating = true;
-        const taskIdStr = String(taskId);
+        // Limpar o ID (remover decimais)
+        const taskIdStr = String(taskId).split('.')[0];
+        console.log(`🔄 Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
+        
+        showToast('⏳ Atualizando status...', 'info');
         
         const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
@@ -2157,17 +2161,26 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar status');
+            const errorText = await response.text();
+            let errorMessage = 'Erro ao atualizar status';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch (e) {
+                errorMessage = errorText || errorMessage;
+            }
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
+        console.log('✅ Resposta:', data);
         
         if (data.success) {
             await loadAlunoData();
             updateAlunoXP();
             await checkAchievements();
             
+            // Recarregar a grade e as tarefas
             if (currentScheduleId) {
                 await renderScheduleGrid(currentScheduleId, 'aluno');
             }
