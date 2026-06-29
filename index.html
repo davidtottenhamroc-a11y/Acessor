@@ -482,20 +482,6 @@
         .mt-1 { margin-top: 10px; }
         .mt-2 { margin-top: 20px; }
 
-        /* Loading spinner */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         @media (max-width: 768px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .grid-week { grid-template-columns: repeat(3, 1fr); }
@@ -535,7 +521,9 @@
                 🚀 Entrar no StudyQuest
             </button>
             
-           
+            <p style="margin-top:15px;font-size:12px;color:var(--text-secondary);">
+                💡 Demo: David (senha: david0724) ou Malu (senha: Malu123)
+            </p>
         </div>
     </div>
 
@@ -735,6 +723,7 @@ let currentUser = null;
 let selectedRole = null;
 let pendingTaskId = null;
 let selectedDay = null;
+let isUpdating = false;
 
 // ============================================================
 // 🎯 LOGIN
@@ -1003,7 +992,7 @@ async function admRenderTasks() {
                     <span class="badge ${statusBadges[t.status]}">${t.status}</span>
                     ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
                 </div>
-                <button class="btn btn-small btn-danger" onclick="admDeleteTask(${t.id})">🗑️</button>
+                <button class="btn btn-small btn-danger" onclick="admDeleteTask('${t.id}')">🗑️</button>
             </div>
         `).join('');
     } catch (error) {
@@ -1054,7 +1043,7 @@ async function admRenderQuestions() {
                 <p style="margin:8px 0;">${q.text}</p>
                 ${q.answer ? `<div class="answer-box">✅ ${q.answer}</div>` : ''}
                 ${q.status !== 'Respondida' ? `
-                    <button class="btn btn-small btn-primary mt-1" onclick="admAnswerQuestion(${q.id})">
+                    <button class="btn btn-small btn-primary mt-1" onclick="admAnswerQuestion('${q.id}')">
                         ✏️ Responder
                     </button>
                 ` : ''}
@@ -1249,129 +1238,8 @@ async function selectDay(day) {
     await renderAlunoTasksByDay(day);
 }
 
-async function renderAlunoTasksByDay(day) {
-    const container = document.getElementById('aluno-tasks-display');
-    
-    try {
-        const response = await fetch(`${API_URL}/tasks/aluno/${currentUser.id}`);
-        const allTasks = await response.json();
-        const tasks = allTasks.filter(t => t.day === day);
-        
-        if (tasks.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-secondary);">🎉 Nenhuma tarefa cadastrada para este dia</p>';
-            return;
-        }
-        
-        const statusBadges = {
-            'Pendente': 'badge-pending',
-            'Em Andamento': 'badge-doing',
-            'Realizado': 'badge-done',
-            'Não Feito': 'badge-notdone'
-        };
-        
-        tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
-        
-        container.innerHTML = tasks.map(t => `
-            <div class="task-item slide-in" id="task-${t.id}">
-                <div class="task-info">
-                    <span class="task-time">🕐 ${t.timeStart} - ${t.timeEnd}</span>
-                    <strong>${t.name}</strong>
-                    <br>
-                    <span class="badge ${statusBadges[t.status]}" id="status-badge-${t.id}">${t.status}</span>
-                    ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
-                    ${t.status === 'Não Feito' ? '<br><small style="color:var(--accent-orange);">⚠️ Requer justificativa para alterar</small>' : ''}
-                </div>
-                <div class="task-actions">
-                    ${t.status !== 'Não Feito' ? `
-                        <button class="btn btn-small btn-success" onclick="alunoUpdateTaskStatus(${t.id}, 'Realizado')" id="btn-done-${t.id}">
-                            ✅
-                        </button>
-                        <button class="btn btn-small btn-warning" onclick="alunoUpdateTaskStatus(${t.id}, 'Em Andamento')" id="btn-doing-${t.id}">
-                            🔄
-                        </button>
-                        <button class="btn btn-small btn-danger" onclick="alunoMarkNotDone(${t.id})" id="btn-notdone-${t.id}">
-                            ❌
-                        </button>
-                    ` : `
-                        <button class="btn btn-small btn-success" onclick="alunoRecoverTask(${t.id})" id="btn-recover-${t.id}">
-                            🔄 Recuperar
-                        </button>
-                    `}
-                </div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Erro ao carregar tarefas:', error);
-        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar tarefas</p>';
-    }
-}
-
 // ============================================================
-// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS (CORRIGIDA)
-// ============================================================
-
-async function alunoUpdateTaskStatus(taskId, newStatus) {
-    try {
-        // Garantir que taskId seja string
-        const taskIdStr = String(taskId);
-        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
-        
-        // Desabilitar botões para evitar cliques duplos
-        const buttons = document.querySelectorAll(`#task-${taskIdStr} .btn`);
-        buttons.forEach(btn => btn.disabled = true);
-        
-        showToast('⏳ Atualizando status...', 'info');
-        
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: newStatus, 
-                justification: '',
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar status');
-        }
-        
-        const data = await response.json();
-        console.log('✅ Resposta do servidor:', data);
-        
-        if (data.success) {
-            // Recarregar dados do usuário
-            await loadAlunoData();
-            updateAlunoXP();
-            await checkAchievements();
-            
-            // Recarregar a lista de tarefas para garantir consistência
-            await renderAlunoTasksByDay(selectedDay);
-            
-            // Mostrar toast com XP ganho
-            if (data.xpGanho > 0) {
-                showToast(`✅ Status atualizado! +${data.xpGanho} XP ⚡`, 'success');
-            } else {
-                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
-            }
-        } else {
-            throw new Error('Erro ao atualizar status');
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro ao atualizar status:', error);
-        showToast('❌ ' + error.message, 'error');
-        
-        // Reabilitar botões
-        const taskIdStr = String(taskId);
-        const buttons = document.querySelectorAll(`#task-${taskIdStr} .btn`);
-        buttons.forEach(btn => btn.disabled = false);
-    }
-}
-
-// ============================================================
-// RENDERIZAR TAREFAS DO ALUNO (CORRIGIDA)
+// 🎯 RENDERIZAR TAREFAS DO ALUNO (VERSÃO CORRIGIDA)
 // ============================================================
 
 async function renderAlunoTasksByDay(day) {
@@ -1399,7 +1267,10 @@ async function renderAlunoTasksByDay(day) {
         tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
         
         container.innerHTML = tasks.map(t => {
-            const taskId = String(t.id); // Garantir que é string
+            // Garantir que o ID seja tratado como string
+            const taskId = String(t.id);
+            console.log(`🆔 Tarefa ID: ${taskId} (tipo: ${typeof taskId})`);
+            
             return `
                 <div class="task-item slide-in" id="task-${taskId}">
                     <div class="task-info">
@@ -1438,17 +1309,100 @@ async function renderAlunoTasksByDay(day) {
 }
 
 // ============================================================
+// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS (CORRIGIDA)
+// ============================================================
+
+async function alunoUpdateTaskStatus(taskId, newStatus) {
+    // Evitar múltiplas requisições simultâneas
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
+    
+    try {
+        isUpdating = true;
+        const taskIdStr = String(taskId);
+        
+        console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
+        
+        // Desabilitar botões para evitar cliques duplos
+        const taskElement = document.getElementById(`task-${taskIdStr}`);
+        if (taskElement) {
+            const buttons = taskElement.querySelectorAll('.btn');
+            buttons.forEach(btn => btn.disabled = true);
+        }
+        
+        showToast('⏳ Atualizando status...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                status: newStatus, 
+                justification: '',
+                alunoId: currentUser.id 
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao atualizar status');
+        }
+        
+        const data = await response.json();
+        console.log('✅ Resposta do servidor:', data);
+        
+        if (data.success) {
+            // Recarregar dados do usuário
+            await loadAlunoData();
+            updateAlunoXP();
+            await checkAchievements();
+            
+            // Recarregar a lista de tarefas
+            await renderAlunoTasksByDay(selectedDay);
+            
+            // Mostrar toast com XP ganho
+            if (data.xpGanho > 0) {
+                showToast(`✅ Status atualizado! +${data.xpGanho} XP ⚡`, 'success');
+            } else {
+                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
+            }
+        } else {
+            throw new Error('Erro ao atualizar status');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar status:', error);
+        showToast('❌ ' + error.message, 'error');
+        
+        // Reabilitar botões
+        const taskIdStr = String(taskId);
+        const taskElement = document.getElementById(`task-${taskIdStr}`);
+        if (taskElement) {
+            const buttons = taskElement.querySelectorAll('.btn');
+            buttons.forEach(btn => btn.disabled = false);
+        }
+    } finally {
+        isUpdating = false;
+    }
+}
+
+// ============================================================
 // FUNÇÃO PARA MARCAR COMO NÃO FEITO (CORRIGIDA)
 // ============================================================
 
 function alunoMarkNotDone(taskId) {
-    pendingTaskId = String(taskId); // Garantir que é string
+    pendingTaskId = String(taskId);
     document.getElementById('justify-text').value = '';
     document.getElementById('justify-modal').classList.remove('hidden');
 }
 
 async function confirmNotDone() {
     if (!pendingTaskId) return;
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
     
     const justification = document.getElementById('justify-text').value.trim();
     if (!justification) {
@@ -1457,6 +1411,7 @@ async function confirmNotDone() {
     }
     
     try {
+        isUpdating = true;
         const taskIdStr = String(pendingTaskId);
         console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
         
@@ -1489,9 +1444,10 @@ async function confirmNotDone() {
     } catch (error) {
         console.error('❌ Erro ao marcar como não feito:', error);
         showToast('❌ ' + error.message, 'error');
+    } finally {
+        isUpdating = false;
+        closeJustifyModal();
     }
-    
-    closeJustifyModal();
 }
 
 function closeJustifyModal() {
@@ -1504,13 +1460,17 @@ function closeJustifyModal() {
 // ============================================================
 
 function alunoRecoverTask(taskId) {
-    pendingTaskId = String(taskId); // Garantir que é string
+    pendingTaskId = String(taskId);
     document.getElementById('recover-text').value = '';
     document.getElementById('recover-modal').classList.remove('hidden');
 }
 
 async function confirmRecover() {
     if (!pendingTaskId) return;
+    if (isUpdating) {
+        showToast('⏳ Aguarde, processando...', 'warning');
+        return;
+    }
     
     const justification = document.getElementById('recover-text').value.trim();
     if (!justification) {
@@ -1519,6 +1479,7 @@ async function confirmRecover() {
     }
     
     try {
+        isUpdating = true;
         const taskIdStr = String(pendingTaskId);
         console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
         
@@ -1552,15 +1513,17 @@ async function confirmRecover() {
     } catch (error) {
         console.error('❌ Erro ao recuperar tarefa:', error);
         showToast('❌ ' + error.message, 'error');
+    } finally {
+        isUpdating = false;
+        closeRecoverModal();
     }
-    
-    closeRecoverModal();
 }
 
 function closeRecoverModal() {
     document.getElementById('recover-modal').classList.add('hidden');
     pendingTaskId = null;
 }
+
 // ============================================================
 // FUNÇÕES DE DÚVIDAS
 // ============================================================
@@ -1679,10 +1642,8 @@ function showToast(message, type = 'info') {
 // 🔄 ATUALIZAÇÃO PERIÓDICA
 // ============================================================
 
-let refreshInterval = null;
-
 setInterval(() => {
-    if (currentUser) {
+    if (currentUser && !isUpdating) {
         renderAll();
     }
 }, 10000);
