@@ -580,85 +580,158 @@ app.get('/api/tasks/user/:userId', async (req, res) => {
   }
 });
 
-// ============================================================
-// 🎯 ATUALIZAR STATUS DA TAREFA PELA GRADE (CORRIGIDO)
-// ============================================================
+// ============ ATUALIZAR STATUS DA TAREFA (CORRIGIDO DEFINITIVAMENTE) ============
+app.put('/api/tasks/:taskId/status', async (req, res) => {
+  const { taskId } = req.params;
+  const { status, justification, alunoId } = req.body;
 
-async function updateTaskFromSchedule(taskId, newStatus) {
-    if (isUpdating) {
-        showToast('⏳ Aguarde, processando...', 'warning');
-        return;
+  try {
+    // Limpar o ID (remover decimais e converter para número)
+    const taskIdClean = String(taskId).split('.')[0];
+    const taskIdNum = Number(taskIdClean);
+    
+    console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
+    console.log(`📝 Status: ${status}, Aluno: ${alunoId}`);
+    
+    // Tentar encontrar a tarefa de várias formas
+    let checkResult = null;
+    
+    // 1. Tentar como número (mais provável)
+    if (!isNaN(taskIdNum)) {
+      checkResult = await runQuery(
+        'MATCH (t:Task {id: $taskId}) RETURN t',
+        { taskId: taskIdNum }
+      );
     }
     
-    try {
-        isUpdating = true;
-        
-        // Limpar o ID (remover decimais e converter para número)
-        const taskIdClean = String(taskId).split('.')[0];
-        const taskIdNum = Number(taskIdClean);
-        
-        console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
-        console.log(`📝 Novo status: "${newStatus}"`);
-        
-        showToast('⏳ Atualizando status...', 'info');
-        
-        // Usar o ID numérico na URL
-        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                status: newStatus, 
-                justification: '',
-                alunoId: currentUser.id 
-            })
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = 'Erro ao atualizar status';
-            try {
-                const errorJson = JSON.parse(errorText);
-                errorMessage = errorJson.error || errorMessage;
-            } catch (e) {
-                errorMessage = errorText || errorMessage;
-            }
-            throw new Error(errorMessage);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Resposta do servidor:', data);
-        
-        if (data.success) {
-            // Recarregar dados do aluno
-            await loadAlunoData();
-            updateAlunoXP();
-            await checkAchievements();
-            
-            // Recarregar a grade
-            if (currentScheduleId) {
-                await renderScheduleGrid(currentScheduleId, 'aluno');
-            }
-            
-            // Recarregar as tarefas do dia
-            if (selectedDay) {
-                await renderAlunoTasksByDay(selectedDay);
-            }
-            
-            if (data.xpGanho > 0) {
-                showToast(`✅ +${data.xpGanho} XP! 🎉`, 'success');
-            } else {
-                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
-            }
-        } else {
-            throw new Error(data.message || 'Erro ao atualizar status');
-        }
-    } catch (error) {
-        console.error('❌ Erro ao atualizar status:', error);
-        showToast('❌ ' + error.message, 'error');
-    } finally {
-        isUpdating = false;
+    // 2. Se não encontrou, tentar como string
+    if (!checkResult || checkResult.records.length === 0) {
+      checkResult = await runQuery(
+        'MATCH (t:Task {id: $taskId}) RETURN t',
+        { taskId: taskIdClean }
+      );
     }
-}
+    
+    // 3. Tentar buscar ignorando o tipo (como string ou número)
+    if (!checkResult || checkResult.records.length === 0) {
+      checkResult = await runQuery(
+        `MATCH (t:Task) WHERE toString(t.id) = $taskIdStr RETURN t`,
+        { taskIdStr: taskIdClean }
+      );
+    }
+
+    if (!checkResult || checkResult.records.length === 0) {
+      console.log(`❌ Tarefa ${taskId} não encontrada após todas as tentativas`);
+      return res.status(404).json({ error: 'Tarefa não encontrada' });
+    }
+
+    const task = checkResult.records[0].get('t').properties;
+    const oldStatus = task.status;
+    const taskName = task.name;
+    const taskRealId = task.id;
+
+    console.log(`📝 Tarefa encontrada: ${taskName} (ID: ${taskRealId}, tipo: ${typeof taskRealId})`);
+    console.log(`📝 Status antigo: ${oldStatus} → Novo: ${status}`);
+
+    // Atualizar o status usando o ID real
+    await runQuery(
+      `
+      MATCH (t:Task {id: $taskId})
+      SET t.status = $status,
+          t.justification = $justification
+      RETURN t
+      `,
+      { 
+        taskId: taskRealId, 
+        status, 
+        justification: justification || '' 
+      }
+    );
+
+    // Buscar nome do aluno
+    const alunoResult = await runQuery(
+      'MATCH (u:User {id: $alunoId}) RETURN u.name',
+      { alunoId }
+    );
+    const alunoName = alunoResult.records.length > 0 ? alunoResult.records[0].get('u.name') : 'Aluno';
+
+    // Criar log
+    const timestamp = new Date().toLocaleString('pt-BR');
+    await runQuery(
+      `
+      MATCH (aluno:User {id: $alunoId})
+      CREATE (l:Log {
+        id: $logId,
+        timestamp: $timestamp,
+        alunoId: $alunoId,
+        taskId: $taskId,
+        oldStatus: $oldStatus,
+        newStatus: $status,
+        justification: $justification,
+        alunoName: $alunoName,
+        taskName: $taskName
+      })
+      CREATE (aluno)-[:TEM_LOG]->(l)
+      `,
+      {
+        alunoId,
+        taskId: taskRealId,
+        logId: String(Date.now() + 1),
+        timestamp,
+        oldStatus,
+        status,
+        justification: justification || '',
+        alunoName,
+        taskName
+      }
+    );
+
+    // Calcular XP
+    let xpGanho = 0;
+    if (status === 'Realizado' && oldStatus !== 'Realizado') {
+      if (oldStatus === 'Não Feito') {
+        xpGanho = 25;
+      } else {
+        xpGanho = 15;
+      }
+    } else if (status === 'Em Andamento' && oldStatus === 'Pendente') {
+      xpGanho = 5;
+    } else if (status === 'Não Feito' && oldStatus !== 'Não Feito') {
+      xpGanho = 2;
+    }
+
+    if (xpGanho > 0) {
+      await runQuery(
+        `
+        MATCH (u:User {id: $alunoId})
+        SET u.xp = (u.xp + $xpGanho)
+        SET u.level = (toInteger(u.xp / 100) + 1)
+        RETURN u
+        `,
+        { alunoId, xpGanho }
+      );
+      console.log(`✅ +${xpGanho} XP para o aluno`);
+    }
+
+    // Buscar a tarefa atualizada
+    const updatedResult = await runQuery(
+      'MATCH (t:Task {id: $taskId}) RETURN t',
+      { taskId: taskRealId }
+    );
+    const updatedTask = updatedResult.records[0].get('t').properties;
+
+    res.json({ 
+      success: true, 
+      task: updatedTask,
+      xpGanho,
+      message: `Status atualizado para ${status}`
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar tarefa:', error);
+    res.status(500).json({ error: 'Erro ao atualizar status da tarefa: ' + error.message });
+  }
+});
 
 // Deletar tarefa
 app.delete('/api/tasks/:taskId', async (req, res) => {
@@ -666,13 +739,15 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
 
   try {
     const taskIdStr = String(taskId).split('.')[0];
+    const taskIdNum = Number(taskIdStr);
+    
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
       OPTIONAL MATCH (t)-[:TEM_LOG]-(l:Log)
       DETACH DELETE t, l
       `,
-      { taskId: parseInt(taskIdStr) || taskIdStr }
+      { taskId: taskIdNum || taskIdStr }
     );
 
     res.json({ success: true });
@@ -794,7 +869,7 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
           q.respondida_em = datetime()
       RETURN q
       `,
-      { questionId: parseInt(questionId) || questionId, answer }
+      { questionId: Number(questionId) || questionId, answer }
     );
 
     res.json({ success: true });
@@ -946,7 +1021,8 @@ app.post('/api/schedules', async (req, res) => {
         dataInicio: $dataInicio,
         dataFim: $dataFim,
         diasSemana: $diasSemana,
-        atividades: $atividades      })
+        atividades: $atividades
+      })
       CREATE (aluno)-[:TEM_HORARIO]->(s)
       RETURN s
       `,
