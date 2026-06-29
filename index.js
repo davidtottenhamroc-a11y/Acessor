@@ -285,24 +285,31 @@ app.get('/api/tasks/admin/:admId', async (req, res) => {
   }
 });
 
-// Atualizar status da tarefa
+// ============ ATUALIZAR STATUS DA TAREFA ============
 app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { taskId } = req.params;
   const { status, justification, alunoId } = req.body;
 
   try {
-    const oldResult = await runQuery(
-      'MATCH (t:Task {id: $taskId}) RETURN t.status AS oldStatus, t.name AS taskName',
+    console.log(`🔄 Atualizando tarefa ${taskId} para status: ${status}`);
+
+    // Verificar se a tarefa existe
+    const checkResult = await runQuery(
+      'MATCH (t:Task {id: $taskId}) RETURN t',
       { taskId }
     );
-    
-    if (oldResult.records.length === 0) {
+
+    if (checkResult.records.length === 0) {
       return res.status(404).json({ error: 'Tarefa não encontrada' });
     }
-    
-    const oldStatus = oldResult.records[0].get('oldStatus');
-    const taskName = oldResult.records[0].get('taskName');
-    
+
+    const task = checkResult.records[0].get('t').properties;
+    const oldStatus = task.status;
+    const taskName = task.name;
+
+    console.log(`📝 Status antigo: ${oldStatus}`);
+
+    // Atualizar o status
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
@@ -312,14 +319,16 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       `,
       { taskId, status, justification: justification || '' }
     );
-    
-    const timestamp = new Date().toLocaleString('pt-BR');
+
+    // Buscar nome do aluno
     const alunoResult = await runQuery(
-      'MATCH (u:User {id: $id}) RETURN u.name',
-      { id: alunoId }
+      'MATCH (u:User {id: $alunoId}) RETURN u.name',
+      { alunoId }
     );
     const alunoName = alunoResult.records[0].get('u.name');
-    
+
+    // Criar log
+    const timestamp = new Date().toLocaleString('pt-BR');
     await runQuery(
       `
       MATCH (aluno:User {id: $alunoId})
@@ -348,74 +357,51 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
         taskName
       }
     );
-    
+
+    // Atualizar XP conforme o status
+    let xpGanho = 0;
     if (status === 'Realizado' && oldStatus !== 'Realizado') {
-      await runQuery(
-        `
-        MATCH (u:User {id: $alunoId})
-        SET u.xp = (u.xp + 15)
-        SET u.level = (toInteger(u.xp / 100) + 1)
-        RETURN u
-        `,
-        { alunoId }
-      );
+      if (oldStatus === 'Não Feito') {
+        xpGanho = 25; // Recuperação
+      } else {
+        xpGanho = 15; // Conclusão normal
+      }
     } else if (status === 'Em Andamento' && oldStatus === 'Pendente') {
-      await runQuery(
-        `
-        MATCH (u:User {id: $alunoId})
-        SET u.xp = (u.xp + 5)
-        SET u.level = (toInteger(u.xp / 100) + 1)
-        RETURN u
-        `,
-        { alunoId }
-      );
+      xpGanho = 5;
     } else if (status === 'Não Feito' && oldStatus !== 'Não Feito') {
-      await runQuery(
-        `
-        MATCH (u:User {id: $alunoId})
-        SET u.xp = (u.xp + 2)
-        SET u.level = (toInteger(u.xp / 100) + 1)
-        RETURN u
-        `,
-        { alunoId }
-      );
-    } else if (status === 'Realizado' && oldStatus === 'Não Feito') {
-      await runQuery(
-        `
-        MATCH (u:User {id: $alunoId})
-        SET u.xp = (u.xp + 25)
-        SET u.level = (toInteger(u.xp / 100) + 1)
-        RETURN u
-        `,
-        { alunoId }
-      );
+      xpGanho = 2;
     }
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Erro ao atualizar tarefa:', error);
-    res.status(500).json({ error: 'Erro ao atualizar tarefa' });
-  }
-});
+    if (xpGanho > 0) {
+      await runQuery(
+        `
+        MATCH (u:User {id: $alunoId})
+        SET u.xp = (u.xp + $xpGanho)
+        SET u.level = (toInteger(u.xp / 100) + 1)
+        RETURN u
+        `,
+        { alunoId, xpGanho }
+      );
+      console.log(`✅ +${xpGanho} XP para o aluno`);
+    }
 
-// Deletar tarefa
-app.delete('/api/tasks/:taskId', async (req, res) => {
-  const { taskId } = req.params;
-
-  try {
-    await runQuery(
-      `
-      MATCH (t:Task {id: $taskId})
-      OPTIONAL MATCH (t)-[:TEM_LOG]-(l:Log)
-      DETACH DELETE t, l
-      `,
+    // Retornar a tarefa atualizada
+    const updatedResult = await runQuery(
+      'MATCH (t:Task {id: $taskId}) RETURN t',
       { taskId }
     );
+    const updatedTask = updatedResult.records[0].get('t').properties;
 
-    res.json({ success: true });
+    res.json({ 
+      success: true, 
+      task: updatedTask,
+      xpGanho,
+      message: `Status atualizado para ${status}`
+    });
+
   } catch (error) {
-    console.error('Erro ao deletar tarefa:', error);
-    res.status(500).json({ error: 'Erro ao deletar tarefa' });
+    console.error('❌ Erro ao atualizar tarefa:', error);
+    res.status(500).json({ error: 'Erro ao atualizar status da tarefa' });
   }
 });
 
