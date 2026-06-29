@@ -580,48 +580,36 @@ app.get('/api/tasks/user/:userId', async (req, res) => {
   }
 });
 
-// ============ ATUALIZAR STATUS DA TAREFA (CORRIGIDO DEFINITIVAMENTE) ============
+// ============ ATUALIZAR STATUS DA TAREFA (VERSÃO FINAL - CORRIGIDA) ============
 app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { taskId } = req.params;
   const { status, justification, alunoId } = req.body;
 
   try {
-    // Limpar o ID (remover decimais e converter para número)
+    // Limpar o ID (remover decimais)
     const taskIdClean = String(taskId).split('.')[0];
-    const taskIdNum = Number(taskIdClean);
     
-    console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
+    console.log(`🔄 Atualizando tarefa - ID recebido: ${taskId}, ID limpo: ${taskIdClean}`);
     console.log(`📝 Status: ${status}, Aluno: ${alunoId}`);
     
-    // Tentar encontrar a tarefa de várias formas
-    let checkResult = null;
+    // Buscar a tarefa SEMPRE como número, pois o Neo4j armazena como número
+    const taskIdNum = Number(taskIdClean);
     
-    // 1. Tentar como número (mais provável)
-    if (!isNaN(taskIdNum)) {
-      checkResult = await runQuery(
-        'MATCH (t:Task {id: $taskId}) RETURN t',
-        { taskId: taskIdNum }
-      );
+    if (isNaN(taskIdNum)) {
+      console.log(`❌ ID inválido: ${taskIdClean}`);
+      return res.status(400).json({ error: 'ID da tarefa inválido' });
     }
     
-    // 2. Se não encontrou, tentar como string
-    if (!checkResult || checkResult.records.length === 0) {
-      checkResult = await runQuery(
-        'MATCH (t:Task {id: $taskId}) RETURN t',
-        { taskId: taskIdClean }
-      );
-    }
+    console.log(`🔍 Buscando tarefa com ID numérico: ${taskIdNum} (tipo: ${typeof taskIdNum})`);
     
-    // 3. Tentar buscar ignorando o tipo (como string ou número)
-    if (!checkResult || checkResult.records.length === 0) {
-      checkResult = await runQuery(
-        `MATCH (t:Task) WHERE toString(t.id) = $taskIdStr RETURN t`,
-        { taskIdStr: taskIdClean }
-      );
-    }
+    // Buscar a tarefa pelo ID numérico
+    const checkResult = await runQuery(
+      'MATCH (t:Task) WHERE t.id = $taskIdNum RETURN t',
+      { taskIdNum: taskIdNum }
+    );
 
     if (!checkResult || checkResult.records.length === 0) {
-      console.log(`❌ Tarefa ${taskId} não encontrada após todas as tentativas`);
+      console.log(`❌ Tarefa com ID ${taskIdNum} não encontrada`);
       return res.status(404).json({ error: 'Tarefa não encontrada' });
     }
 
@@ -633,7 +621,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     console.log(`📝 Tarefa encontrada: ${taskName} (ID: ${taskRealId}, tipo: ${typeof taskRealId})`);
     console.log(`📝 Status antigo: ${oldStatus} → Novo: ${status}`);
 
-    // Atualizar o status usando o ID real
+    // Atualizar o status
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
@@ -738,8 +726,10 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
   const { taskId } = req.params;
 
   try {
-    const taskIdStr = String(taskId).split('.')[0];
-    const taskIdNum = Number(taskIdStr);
+    const taskIdClean = String(taskId).split('.')[0];
+    const taskIdNum = Number(taskIdClean);
+    
+    console.log(`🗑️ Deletando tarefa com ID: ${taskIdNum}`);
     
     await runQuery(
       `
@@ -747,7 +737,7 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
       OPTIONAL MATCH (t)-[:TEM_LOG]-(l:Log)
       DETACH DELETE t, l
       `,
-      { taskId: taskIdNum || taskIdStr }
+      { taskId: taskIdNum }
     );
 
     res.json({ success: true });
