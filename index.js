@@ -110,26 +110,33 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Cadastrar aluno (apenas adm pode criar)
+// Cadastrar aluno (adm OU assessor podem cadastrar)
 app.post('/api/users/aluno', async (req, res) => {
-  const { name, password, admId } = req.body;
+  const { name, password, userId } = req.body;
 
   try {
-    // Verificar se o criador é um admin
-    const adminCheck = await runQuery(
-      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
-      { admId }
+    // Verificar se o usuário existe
+    const userCheck = await runQuery(
+      'MATCH (u:User {id: $userId}) RETURN u',
+      { userId }
     );
 
-    if (adminCheck.records.length === 0) {
-      return res.status(403).json({ error: 'Apenas administradores podem cadastrar alunos' });
+    if (userCheck.records.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const user = userCheck.records[0].get('u').properties;
+    
+    // Verificar se é adm ou assessor
+    if (user.role !== 'adm' && user.role !== 'assessor') {
+      return res.status(403).json({ error: 'Apenas administradores e assessores podem cadastrar alunos' });
     }
 
     const alunoId = 'aluno_' + Date.now();
     
     const result = await runQuery(
       `
-      MATCH (adm:User {id: $admId})
+      MATCH (user:User {id: $userId})
       CREATE (aluno:User {
         id: $alunoId,
         name: $name,
@@ -139,10 +146,10 @@ app.post('/api/users/aluno', async (req, res) => {
         level: 1,
         achievements: []
       })
-      CREATE (adm)-[:VINCULA]->(aluno)
+      CREATE (user)-[:VINCULA]->(aluno)
       RETURN aluno
       `,
-      { admId, alunoId, name, password }
+      { userId, alunoId, name, password }
     );
 
     const aluno = result.records[0].get('aluno').properties;
@@ -153,7 +160,7 @@ app.post('/api/users/aluno', async (req, res) => {
   }
 });
 
-// Cadastrar assessor (apenas adm pode criar)
+// Cadastrar assessor (apenas adm)
 app.post('/api/users/assessor', async (req, res) => {
   const { name, password, admId } = req.body;
 
@@ -193,11 +200,21 @@ app.post('/api/users/assessor', async (req, res) => {
   }
 });
 
-// Vincular aluno a um assessor
+// Vincular aluno a um assessor (apenas adm)
 app.post('/api/users/vincular', async (req, res) => {
-  const { alunoId, assessorId } = req.body;
+  const { alunoId, assessorId, admId } = req.body;
 
   try {
+    // Verificar se o adm existe
+    const adminCheck = await runQuery(
+      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
+      { admId }
+    );
+
+    if (adminCheck.records.length === 0) {
+      return res.status(403).json({ error: 'Apenas administradores podem vincular alunos' });
+    }
+
     // Verificar se o assessor existe
     const assessorCheck = await runQuery(
       'MATCH (u:User {id: $assessorId, role: "assessor"}) RETURN u',
@@ -218,7 +235,16 @@ app.post('/api/users/vincular', async (req, res) => {
       return res.status(404).json({ error: 'Aluno não encontrado' });
     }
 
-    // Criar vínculo
+    // Remover vínculo anterior se existir
+    await runQuery(
+      `
+      MATCH (assessor:User)-[r:VINCULA]->(aluno:User {id: $alunoId})
+      DELETE r
+      `,
+      { alunoId }
+    );
+
+    // Criar novo vínculo
     await runQuery(
       `
       MATCH (assessor:User {id: $assessorId})
@@ -239,22 +265,28 @@ app.post('/api/users/vincular', async (req, res) => {
 // Remover aluno
 app.delete('/api/users/aluno/:alunoId', async (req, res) => {
   const { alunoId } = req.params;
-  const { admId } = req.body;
+  const { userId } = req.body;
 
   try {
-    // Verificar se o adm tem permissão
-    const adminCheck = await runQuery(
-      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
-      { admId }
+    // Verificar se o usuário existe
+    const userCheck = await runQuery(
+      'MATCH (u:User {id: $userId}) RETURN u',
+      { userId }
     );
 
-    if (adminCheck.records.length === 0) {
-      return res.status(403).json({ error: 'Apenas administradores podem remover alunos' });
+    if (userCheck.records.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const user = userCheck.records[0].get('u').properties;
+    
+    if (user.role !== 'adm' && user.role !== 'assessor') {
+      return res.status(403).json({ error: 'Apenas administradores e assessores podem remover alunos' });
     }
 
     await runQuery(
       `
-      MATCH (adm:User {id: $admId})-[r:VINCULA]->(aluno:User {id: $alunoId})
+      MATCH (user:User {id: $userId})-[r:VINCULA]->(aluno:User {id: $alunoId})
       DELETE r
       WITH aluno
       OPTIONAL MATCH (aluno)-[:TEM_TAREFA]->(t:Task)
@@ -265,7 +297,7 @@ app.delete('/api/users/aluno/:alunoId', async (req, res) => {
       DELETE r2
       DETACH DELETE aluno, t, q, l, s
       `,
-      { admId, alunoId }
+      { userId, alunoId }
     );
 
     res.json({ success: true });
@@ -275,7 +307,43 @@ app.delete('/api/users/aluno/:alunoId', async (req, res) => {
   }
 });
 
-// Buscar alunos vinculados a um usuário (adm ou assessor)
+// Remover assessor (apenas adm)
+app.delete('/api/users/assessor/:assessorId', async (req, res) => {
+  const { assessorId } = req.params;
+  const { admId } = req.body;
+
+  try {
+    // Verificar se o adm tem permissão
+    const adminCheck = await runQuery(
+      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
+      { admId }
+    );
+
+    if (adminCheck.records.length === 0) {
+      return res.status(403).json({ error: 'Apenas administradores podem remover assessores' });
+    }
+
+    // Remover vínculos e o assessor
+    await runQuery(
+      `
+      MATCH (adm:User {id: $admId})-[:VINCULA_ASSESSOR]->(assessor:User {id: $assessorId})
+      DELETE r
+      WITH assessor
+      OPTIONAL MATCH (assessor)-[:VINCULA]->(aluno:User)
+      DELETE r2
+      DETACH DELETE assessor
+      `,
+      { admId, assessorId }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao remover assessor:', error);
+    res.status(500).json({ error: 'Erro ao remover assessor: ' + error.message });
+  }
+});
+
+// Buscar alunos vinculados a um usuário
 app.get('/api/users/alunos/:userId', async (req, res) => {
   const { userId } = req.params;
 
@@ -473,7 +541,7 @@ app.get('/api/tasks/aluno/:alunoId/periodo', async (req, res) => {
   }
 });
 
-// Buscar tarefas de todos os alunos de um usuário (adm ou assessor)
+// Buscar tarefas de todos os alunos de um usuário
 app.get('/api/tasks/user/:userId', async (req, res) => {
   const { userId } = req.params;
   const { dataInicio, dataFim, alunoId } = req.query;
@@ -512,37 +580,39 @@ app.get('/api/tasks/user/:userId', async (req, res) => {
   }
 });
 
-// Atualizar status da tarefa
+// Atualizar status da tarefa (CORRIGIDO)
 app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { taskId } = req.params;
   const { status, justification, alunoId } = req.body;
 
   try {
-    console.log(`🔄 Atualizando tarefa ID: ${taskId} para status: ${status}`);
+    // Limpar o ID (remover decimais)
+    const taskIdStr = String(taskId).split('.')[0];
+    const taskIdNum = parseInt(taskIdStr);
     
+    console.log(`🔄 Atualizando tarefa ID: ${taskId} -> ${taskIdStr} para status: ${status}`);
+    
+    // Tentar encontrar a tarefa de várias formas
     let checkResult = await runQuery(
       `MATCH (t:Task) WHERE toString(t.id) = $taskIdStr OR t.id = $taskIdNum RETURN t`,
       { 
-        taskIdStr: String(taskId),
-        taskIdNum: parseInt(taskId) || 0
+        taskIdStr: taskIdStr,
+        taskIdNum: taskIdNum
       }
     );
 
     if (checkResult.records.length === 0) {
       checkResult = await runQuery(
         'MATCH (t:Task {id: $taskId}) RETURN t',
-        { taskId: String(taskId) }
+        { taskId: taskIdStr }
       );
     }
 
     if (checkResult.records.length === 0) {
-      const numericId = parseInt(taskId);
-      if (!isNaN(numericId)) {
-        checkResult = await runQuery(
-          'MATCH (t:Task {id: $taskId}) RETURN t',
-          { taskId: numericId }
-        );
-      }
+      checkResult = await runQuery(
+        'MATCH (t:Task {id: $taskId}) RETURN t',
+        { taskId: taskIdNum }
+      );
     }
 
     if (checkResult.records.length === 0) {
@@ -657,13 +727,14 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
   const { taskId } = req.params;
 
   try {
+    const taskIdStr = String(taskId).split('.')[0];
     await runQuery(
       `
       MATCH (t:Task {id: $taskId})
       OPTIONAL MATCH (t)-[:TEM_LOG]-(l:Log)
       DETACH DELETE t, l
       `,
-      { taskId: parseInt(taskId) || taskId }
+      { taskId: parseInt(taskIdStr) || taskIdStr }
     );
 
     res.json({ success: true });
@@ -739,7 +810,7 @@ app.get('/api/questions/aluno/:alunoId', async (req, res) => {
   }
 });
 
-// Buscar dúvidas de alunos vinculados a um usuário (adm ou assessor)
+// Buscar dúvidas de alunos vinculados a um usuário
 app.get('/api/questions/user/:userId', async (req, res) => {
   const { userId } = req.params;
   const { status } = req.query;
@@ -797,7 +868,7 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
 
 // ============ LOGS ============
 
-// Buscar logs de um usuário (adm ou assessor)
+// Buscar logs de um usuário
 app.get('/api/logs/user/:userId', async (req, res) => {
   const { userId } = req.params;
   const { alunoId, dataInicio, dataFim } = req.query;
@@ -937,8 +1008,7 @@ app.post('/api/schedules', async (req, res) => {
         dataInicio: $dataInicio,
         dataFim: $dataFim,
         diasSemana: $diasSemana,
-        atividades: $atividades
-      })
+        atividades: $atividades      })
       CREATE (aluno)-[:TEM_HORARIO]->(s)
       RETURN s
       `,
@@ -972,16 +1042,6 @@ app.post('/api/schedules', async (req, res) => {
       const startDate = new Date(dataInicio);
       const endDate = new Date(dataFim);
       
-      const dayMap = {
-        'segunda': 1,
-        'terca': 2,
-        'quarta': 3,
-        'quinta': 4,
-        'sexta': 5,
-        'sabado': 6,
-        'domingo': 0
-      };
-
       const dayNames = {
         0: 'domingo',
         1: 'segunda',
