@@ -2144,13 +2144,18 @@ async function updateTaskFromSchedule(taskId, newStatus) {
     
     try {
         isUpdating = true;
-        // Limpar o ID (remover decimais)
-        const taskIdStr = String(taskId).split('.')[0];
-        console.log(`🔄 Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
+        
+        // Limpar o ID (remover decimais e converter para número)
+        const taskIdClean = String(taskId).split('.')[0];
+        const taskIdNum = Number(taskIdClean);
+        
+        console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
+        console.log(`📝 Novo status: "${newStatus}"`);
         
         showToast('⏳ Atualizando status...', 'info');
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+        // Usar o ID numérico na URL
+        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2173,26 +2178,34 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         }
         
         const data = await response.json();
-        console.log('✅ Resposta:', data);
+        console.log('✅ Resposta do servidor:', data);
         
         if (data.success) {
+            // Recarregar dados do aluno
             await loadAlunoData();
             updateAlunoXP();
             await checkAchievements();
             
-            // Recarregar a grade e as tarefas
+            // Recarregar a grade
             if (currentScheduleId) {
                 await renderScheduleGrid(currentScheduleId, 'aluno');
             }
             
-            if (data.xpGanho > 0) {
-                showToast(`✅ +${data.xpGanho} XP!`, 'success');
-            } else {
-                showToast(`✅ Status: ${newStatus}`, 'success');
+            // Recarregar as tarefas do dia
+            if (selectedDay) {
+                await renderAlunoTasksByDay(selectedDay);
             }
+            
+            if (data.xpGanho > 0) {
+                showToast(`✅ +${data.xpGanho} XP! 🎉`, 'success');
+            } else {
+                showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
+            }
+        } else {
+            throw new Error(data.message || 'Erro ao atualizar status');
         }
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao atualizar status:', error);
         showToast('❌ ' + error.message, 'error');
     } finally {
         isUpdating = false;
@@ -2200,7 +2213,7 @@ async function updateTaskFromSchedule(taskId, newStatus) {
 }
 
 // ============================================================
-// 📝 FUNÇÕES PARA NÃO FEITO E RECUPERAR
+// 📝 FUNÇÕES PARA NÃO FEITO E RECUPERAR (CORRIGIDAS)
 // ============================================================
 
 let pendingScheduleTaskId = null;
@@ -2228,9 +2241,16 @@ async function confirmNotDone() {
     
     try {
         isUpdating = true;
-        const taskIdStr = String(taskId);
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+        // Limpar o ID
+        const taskIdClean = String(taskId).split('.')[0];
+        const taskIdNum = Number(taskIdClean);
+        
+        console.log(`❌ Marcando tarefa ${taskIdNum} como Não Feito`);
+        
+        showToast('⏳ Atualizando...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2250,6 +2270,10 @@ async function confirmNotDone() {
         
         if (currentScheduleId) {
             await renderScheduleGrid(currentScheduleId, 'aluno');
+        }
+        
+        if (selectedDay) {
+            await renderAlunoTasksByDay(selectedDay);
         }
         
         showToast('📝 Tarefa marcada como Não Feito', 'info');
@@ -2294,9 +2318,16 @@ async function confirmRecover() {
     
     try {
         isUpdating = true;
-        const taskIdStr = String(taskId);
         
-        const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
+        // Limpar o ID
+        const taskIdClean = String(taskId).split('.')[0];
+        const taskIdNum = Number(taskIdClean);
+        
+        console.log(`🔄 Recuperando tarefa ${taskIdNum}`);
+        
+        showToast('⏳ Recuperando tarefa...', 'info');
+        
+        const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2319,7 +2350,11 @@ async function confirmRecover() {
             await renderScheduleGrid(currentScheduleId, 'aluno');
         }
         
-        showToast('🔄 Tarefa recuperada! +25 XP', 'success');
+        if (selectedDay) {
+            await renderAlunoTasksByDay(selectedDay);
+        }
+        
+        showToast('🔄 Tarefa recuperada! +25 XP 🎉', 'success');
         
     } catch (error) {
         console.error('❌ Erro ao recuperar tarefa:', error);
