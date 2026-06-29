@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 
-// Configuração do Neo4j - com tratamento de erro
+// Configuração do Neo4j
 let driver = null;
 
 try {
@@ -30,7 +30,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('.'));
 
-// Helper para executar queries com tratamento de erro
+// Helper para executar queries
 const runQuery = async (query, params = {}) => {
   if (!driver) {
     throw new Error('Driver Neo4j não inicializado');
@@ -48,7 +48,7 @@ const runQuery = async (query, params = {}) => {
   }
 };
 
-// ============ TESTE DE CONEXÃO ============
+// ============ HEALTH CHECK ============
 app.get('/api/health', async (req, res) => {
   try {
     if (!driver) {
@@ -76,6 +76,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============ USUÁRIOS ============
+
 // Login
 app.post('/api/login', async (req, res) => {
   const { name, password, role } = req.body;
@@ -156,7 +157,8 @@ app.delete('/api/users/aluno/:alunoId', async (req, res) => {
       OPTIONAL MATCH (aluno)-[:TEM_TAREFA]->(t:Task)
       OPTIONAL MATCH (aluno)-[:TEM_DUVIDA]->(q:Question)
       OPTIONAL MATCH (aluno)-[:TEM_LOG]->(l:Log)
-      DETACH DELETE aluno, t, q, l
+      OPTIONAL MATCH (aluno)-[:TEM_HORARIO]->(s:Schedule)
+      DETACH DELETE aluno, t, q, l, s
       `,
       { admId, alunoId }
     );
@@ -216,6 +218,7 @@ app.get('/api/users/aluno/:alunoId', async (req, res) => {
 });
 
 // ============ TAREFAS ============
+
 // Criar tarefa
 app.post('/api/tasks', async (req, res) => {
   const { alunoId, day, timeStart, timeEnd, name } = req.body;
@@ -493,6 +496,7 @@ app.delete('/api/tasks/:taskId', async (req, res) => {
 });
 
 // ============ DÚVIDAS ============
+
 // Enviar dúvida
 app.post('/api/questions', async (req, res) => {
   const { alunoId, text } = req.body;
@@ -606,6 +610,7 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
 });
 
 // ============ LOGS ============
+
 // Buscar logs de um admin
 app.get('/api/logs/admin/:admId', async (req, res) => {
   const { admId } = req.params;
@@ -630,6 +635,7 @@ app.get('/api/logs/admin/:admId', async (req, res) => {
 });
 
 // ============ ACHIEVEMENTS ============
+
 // Atualizar conquistas
 app.post('/api/achievements/check', async (req, res) => {
   const { alunoId } = req.body;
@@ -693,7 +699,8 @@ app.post('/api/achievements/check', async (req, res) => {
   }
 });
 
-// ============ HORÁRIOS/SCHEDULES ============
+// ============ HORÁRIOS (SCHEDULES) ============
+
 // Criar um quadro de horários para um aluno
 app.post('/api/schedules', async (req, res) => {
   const { alunoId, nome, dias } = req.body;
@@ -701,6 +708,16 @@ app.post('/api/schedules', async (req, res) => {
   try {
     const scheduleId = 'schedule_' + Date.now();
     const timestamp = new Date().toLocaleString('pt-BR');
+
+    // Verificar se o aluno existe
+    const alunoCheck = await runQuery(
+      'MATCH (aluno:User {id: $alunoId}) RETURN aluno',
+      { alunoId }
+    );
+
+    if (alunoCheck.records.length === 0) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
 
     const result = await runQuery(
       `
@@ -719,12 +736,16 @@ app.post('/api/schedules', async (req, res) => {
         scheduleId, 
         nome, 
         timestamp,
-        dias: JSON.stringify(dias)
+        dias: JSON.stringify(dias || {})
       }
     );
 
     const schedule = result.records[0].get('s').properties;
-    schedule.dias = JSON.parse(schedule.dias);
+    try {
+      schedule.dias = JSON.parse(schedule.dias);
+    } catch (e) {
+      schedule.dias = {};
+    }
 
     res.json(schedule);
   } catch (error) {
@@ -805,6 +826,16 @@ app.put('/api/schedules/:scheduleId', async (req, res) => {
   const { nome, dias } = req.body;
 
   try {
+    // Verificar se o schedule existe
+    const checkResult = await runQuery(
+      'MATCH (s:Schedule {id: $scheduleId}) RETURN s',
+      { scheduleId }
+    );
+
+    if (checkResult.records.length === 0) {
+      return res.status(404).json({ error: 'Horário não encontrado' });
+    }
+
     const result = await runQuery(
       `
       MATCH (s:Schedule {id: $scheduleId})
@@ -812,7 +843,7 @@ app.put('/api/schedules/:scheduleId', async (req, res) => {
           s.dias = $dias
       RETURN s
       `,
-      { scheduleId, nome, dias: JSON.stringify(dias) }
+      { scheduleId, nome, dias: JSON.stringify(dias || {}) }
     );
 
     const schedule = result.records[0].get('s').properties;
@@ -850,6 +881,7 @@ app.delete('/api/schedules/:scheduleId', async (req, res) => {
 });
 
 // ============ INICIALIZAÇÃO DO BANCO ============
+
 async function initDatabase() {
   try {
     if (!driver) {
@@ -905,6 +937,7 @@ async function initDatabase() {
 initDatabase();
 
 // ============ ROTA PRINCIPAL ============
+
 // Servir o index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
