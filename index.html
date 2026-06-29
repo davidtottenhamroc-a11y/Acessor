@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StudyQuest - Assessoria Gamificada</title>
     <style>
-        /* ===== TODOS OS ESTILOS DO SISTEMA ===== */
+        /* ===== TODOS OS ESTILOS ===== */
         :root {
             --bg-primary: #0a0e27;
             --bg-secondary: #131837;
@@ -72,7 +72,7 @@
         .slide-down { animation: slideDown 0.3s ease-out; }
 
         .app-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
@@ -210,7 +210,6 @@
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .grid-week { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 
         input, select, textarea {
             background: var(--bg-input);
@@ -244,12 +243,6 @@
         .badge-notdone { background: rgba(255,82,82,0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
         .badge-new { background: rgba(124,77,255,0.3); color: #b388ff; border: 1px solid #b388ff; animation: pulse 2s infinite; }
 
-        .xp-container {
-            background: var(--bg-input);
-            border-radius: 20px;
-            padding: 10px 15px;
-            border: 1px solid var(--border-color);
-        }
         .xp-bar-outer {
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
@@ -353,106 +346,6 @@
             z-index: 2000;
             animation: slideIn 0.5s ease-out;
         }
-
-        .day-card {
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-        .day-card:hover { border-color: var(--accent-blue); transform: translateY(-3px); }
-        .day-card.today {
-            border-color: var(--accent-purple);
-            box-shadow: var(--glow-purple);
-            background: rgba(124,77,255,0.1);
-        }
-        .day-card .day-name { font-weight: 700; font-size: 13px; }
-        .day-card .task-count { font-size: 11px; color: var(--text-secondary); }
-
-        .task-item {
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap;
-            transition: all 0.3s;
-        }
-        .task-item:hover { border-color: var(--accent-blue); }
-        .task-info { flex: 1; min-width: 150px; }
-        .task-time { color: var(--accent-blue); font-weight: 700; }
-        .task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-
-        .question-item {
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
-        }
-        .question-item.new-question {
-            border-color: var(--accent-purple);
-            box-shadow: var(--glow-purple);
-        }
-        .answer-box {
-            background: rgba(124,77,255,0.1);
-            border-left: 4px solid var(--accent-purple);
-            padding: 10px 15px;
-            margin-top: 10px;
-            border-radius: 0 8px 8px 0;
-        }
-
-        .login-container {
-            max-width: 450px;
-            margin: 80px auto;
-            text-align: center;
-        }
-        .login-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: var(--shadow);
-        }
-        .login-card h1 { margin-bottom: 10px; }
-        .login-card .subtitle { color: var(--text-secondary); margin-bottom: 25px; }
-        .role-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .role-btn {
-            flex: 1;
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid var(--border-color);
-            background: var(--bg-input);
-            color: var(--text-primary);
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-align: center;
-        }
-        .role-btn:hover { border-color: var(--accent-purple); }
-        .role-btn.selected {
-            border-color: var(--accent-purple);
-            background: rgba(124,77,255,0.1);
-            box-shadow: var(--glow-purple);
-        }
-        .role-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
 
         .aluno-list-item {
             background: var(--bg-input);
@@ -572,12 +465,6 @@
             font-size: 9px;
             color: var(--text-secondary);
             line-height: 1.2;
-        }
-
-        .schedule-table .activity-cell .activity-time {
-            font-size: 8px;
-            color: var(--text-secondary);
-            opacity: 0.7;
         }
 
         .schedule-table .activity-cell .delete-activity {
@@ -804,9 +691,67 @@
             color: white;
         }
 
+        /* Task item para listar tarefas */
+        .task-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            transition: all 0.3s;
+        }
+        .task-item:hover { border-color: var(--accent-blue); }
+        .task-info { flex: 1; min-width: 150px; }
+        .task-time { color: var(--accent-blue); font-weight: 700; }
+        .task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* Login */
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            text-align: center;
+        }
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+        }
+        .login-card h1 { margin-bottom: 10px; }
+        .login-card .subtitle { color: var(--text-secondary); margin-bottom: 25px; }
+        .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .role-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .role-btn:hover { border-color: var(--accent-purple); }
+        .role-btn.selected {
+            border-color: var(--accent-purple);
+            background: rgba(124,77,255,0.1);
+            box-shadow: var(--glow-purple);
+        }
+        .role-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
+
         @media (max-width: 768px) {
-            .grid-2, .grid-3 { grid-template-columns: 1fr; }
-            .grid-week { grid-template-columns: repeat(3, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
             .app-header { flex-direction: column; text-align: center; }
             .task-item { flex-direction: column; align-items: stretch; }
             .task-actions { justify-content: center; }
@@ -820,7 +765,6 @@
             .calendar-controls { flex-direction: column; }
         }
         @media (max-width: 480px) {
-            .grid-week { grid-template-columns: repeat(2, 1fr); }
             .btn { padding: 8px 14px; font-size: 12px; }
             .schedule-table { min-width: 600px; font-size: 9px; }
         }
@@ -893,7 +837,7 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO DE HORÁRIOS COM CALENDÁRIO -->
+            <!-- SEÇÃO DE HORÁRIOS COM CALENDÁRIO E GRADE SEMANAL -->
             <div class="card mt-2">
                 <div class="card-title">📅 Criar Horário com Calendário</div>
                 
@@ -946,19 +890,24 @@
                 </div>
             </div>
 
+            <!-- LISTA DE TAREFAS - COM FILTRO POR ALUNO -->
+            <div class="card mt-2">
+                <div class="card-title">📌 Lista de Tarefas</div>
+                <div class="schedule-controls">
+                    <select id="adm-filter-aluno" onchange="admRenderTasks()" class="mb-1">
+                        <option value="all">Todos os alunos</option>
+                    </select>
+                    <input type="date" id="adm-filter-data" onchange="admRenderTasks()" class="mb-1">
+                    <button class="btn btn-small btn-primary" onclick="admRenderTasks()">🔍 Filtrar</button>
+                </div>
+                <div id="adm-tasks-list"></div>
+            </div>
+
             <div class="card mt-2">
                 <div class="card-title">📋 Registro de Atividades dos Alunos</div>
                 <div id="adm-activity-log">
                     <p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>
                 </div>
-            </div>
-
-            <div class="card mt-2">
-                <div class="card-title">📌 Tarefas Cadastradas</div>
-                <select id="adm-filter-aluno" onchange="admRenderTasks()" class="mb-2">
-                    <option value="all">Todos os alunos</option>
-                </select>
-                <div id="adm-tasks-list"></div>
             </div>
         </div>
 
@@ -992,7 +941,7 @@
             </div>
 
             <div class="card">
-                <div class="card-title">📅 Minha Agenda</div>
+                <div class="card-title">📅 Meus Horários</div>
                 <div id="aluno-schedules-list" class="schedule-list"></div>
                 <div class="schedule-container" id="aluno-schedule-display">
                     <p style="color:var(--text-secondary);">Selecione um horário para visualizar</p>
@@ -1100,12 +1049,11 @@ const API_URL = '/api';
 let currentUser = null;
 let selectedRole = null;
 let pendingTaskId = null;
-let selectedDay = null;
 let isUpdating = false;
 let isRendering = false;
 
 // ============================================================
-// 📅 VARIÁVEIS DO CALENDÁRIO
+// 📅 VARIÁVEIS DO CALENDÁRIO E GRADE
 // ============================================================
 let currentScheduleId = null;
 let isEditMode = false;
@@ -1186,7 +1134,6 @@ async function doLogin() {
 function logout() {
     currentUser = null;
     selectedRole = null;
-    selectedDay = null;
     currentScheduleId = null;
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('main-panel').classList.add('hidden');
@@ -1242,12 +1189,6 @@ async function updateAdmSelects() {
         selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
         alunos.forEach(a => {
             selectAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
-        });
-        
-        const filterAluno = document.getElementById('adm-filter-aluno');
-        filterAluno.innerHTML = '<option value="all">Todos os alunos</option>';
-        alunos.forEach(a => {
-            filterAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
         });
     } catch (error) {
         console.error('Erro ao carregar selects:', error);
@@ -1332,7 +1273,6 @@ async function admRemoverAluno(alunoId) {
 // 📅 FUNÇÕES DO CALENDÁRIO
 // ============================================================
 
-// Toggle dia da semana selecionado
 function toggleDay(day) {
     const index = selectedDays.indexOf(day);
     if (index > -1) {
@@ -1341,7 +1281,6 @@ function toggleDay(day) {
         selectedDays.push(day);
     }
     
-    // Atualizar UI
     document.querySelectorAll('.day-btn').forEach(btn => {
         btn.classList.toggle('selected', selectedDays.includes(btn.dataset.day));
     });
@@ -1434,7 +1373,6 @@ async function admCreateSchedule() {
         return;
     }
 
-    // Verificar se já existem atividades para este horário
     const atividades = {};
 
     try {
@@ -1521,7 +1459,7 @@ function selectModalColor(colorId) {
 }
 
 // ============================================================
-// 🎯 FUNÇÕES DA GRADE HORÁRIA
+// 🎯 FUNÇÕES DA GRADE HORÁRIA - VISUAL COMPLETO (TODOS OS DIAS)
 // ============================================================
 
 async function renderScheduleGrid(scheduleId, view = 'adm') {
@@ -1532,9 +1470,10 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
     try {
         let schedules = [];
         let tarefas = [];
+        let alunoId = '';
         
         if (view === 'adm') {
-            const alunoId = document.getElementById('adm-schedule-aluno').value;
+            alunoId = document.getElementById('adm-schedule-aluno').value;
             if (!alunoId) {
                 container.innerHTML = '<p style="color:var(--text-secondary);">Selecione um aluno primeiro</p>';
                 return;
@@ -1552,6 +1491,7 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
             schedules = Array.isArray(data) ? data : [];
             tarefas = await tasksRes.json();
         } else {
+            alunoId = currentUser.id;
             const [schedulesRes, tasksRes] = await Promise.all([
                 fetch(`${API_URL}/schedules/aluno/${currentUser.id}`),
                 fetch(`${API_URL}/tasks/aluno/${currentUser.id}`)
@@ -1576,19 +1516,35 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
         const isAdmin = view === 'adm';
         const isAluno = view === 'aluno';
 
-        // Mapear tarefas por dia/hora
+        // Mapear tarefas por dia da semana e horário
         const tarefasMap = {};
         tarefas.forEach(t => {
-            const key = `${t.data}_${t.timeStart}`;
-            tarefasMap[key] = t;
+            const key = `${t.diaSemana}_${t.timeStart}`;
+            if (!tarefasMap[key]) {
+                tarefasMap[key] = [];
+            }
+            tarefasMap[key].push(t);
         });
 
-        // Encontrar a data atual para exibir
-        const hoje = new Date().toISOString().split('T')[0];
-        const dataAtual = hoje;
+        // Buscar a data da semana atual para exibir
+        const hoje = new Date();
+        const dataAtual = hoje.toISOString().split('T')[0];
+        
+        // Calcular as datas da semana (segunda a domingo)
+        const diaSemanaAtual = hoje.getDay(); // 0=domingo
+        const diffSegunda = diaSemanaAtual === 0 ? -6 : 1 - diaSemanaAtual;
+        const dataSegunda = new Date(hoje);
+        dataSegunda.setDate(hoje.getDate() + diffSegunda);
+        
+        const diasDaSemana = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(dataSegunda);
+            d.setDate(dataSegunda.getDate() + i);
+            diasDaSemana.push(d.toISOString().split('T')[0]);
+        }
 
-        // Buscar tarefas do dia atual
-        const tarefasHoje = tarefas.filter(t => t.data === dataAtual);
+        const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const dayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
         let html = `
             <div class="schedule-container">
@@ -1599,7 +1555,7 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                             Período: ${schedule.dataInicio || 'N/A'} → ${schedule.dataFim || 'N/A'}
                         </span>
                         <span style="font-size:11px;color:var(--text-secondary);margin-left:10px;">
-                            📅 ${tarefasHoje.length} tarefas hoje (${dataAtual})
+                            📅 Semana de ${diasDaSemana[0]} a ${diasDaSemana[6]}
                         </span>
                     </div>
                     ${isAdmin ? `
@@ -1609,60 +1565,78 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                     ` : ''}
                 </div>
                 
-                <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                    <input type="date" id="schedule-data-view" value="${dataAtual}" 
-                           onchange="changeScheduleDate('${scheduleId}', '${view}')"
-                           style="max-width:200px;">
-                    <button class="btn btn-small btn-primary" onclick="changeScheduleDate('${scheduleId}', '${view}')">
-                        🔄 Atualizar
-                    </button>
-                </div>
-                
                 <div style="overflow-x:auto;">
                     <table class="schedule-table">
                         <thead>
                             <tr>
                                 <th style="min-width:60px;">HORÁRIO</th>
-                                <th>Atividades de ${dataAtual}</th>
+                                ${dayNames.map((nome, idx) => `
+                                    <th>
+                                        ${dayShort[idx]}
+                                        <br>
+                                        <span style="font-size:8px;font-weight:normal;">${diasDaSemana[idx]}</span>
+                                    </th>
+                                `).join('')}
                             </tr>
                         </thead>
                         <tbody>
         `;
 
         HORARIOS_PADRAO.forEach(hora => {
-            const tarefa = tarefasMap[`${dataAtual}_${hora}`];
-            const hasTarefa = tarefa && tarefa.name;
+            html += `<tr><td class="hour-cell">${hora}</td>`;
             
-            html += `<tr>
-                <td class="hour-cell">${hora}</td>
-                <td class="activity-cell ${hasTarefa ? 'has-activity ' + (tarefa.cor || '') : ''}" 
-                    data-hora="${hora}"
-                    onclick="${isAdmin ? `handleCellClick('${dataAtual}', '${hora}')` : ''}">
-                    ${hasTarefa ? `
-                        <div class="activity-wrapper">
-                            <div class="activity-name">${tarefa.name}</div>
-                            ${tarefa.descricao ? `<div class="activity-subject">${tarefa.descricao}</div>` : ''}
-                            ${tarefa.status ? `<div class="badge ${tarefa.status === 'Realizado' ? 'badge-done' : tarefa.status === 'Em Andamento' ? 'badge-doing' : tarefa.status === 'Não Feito' ? 'badge-notdone' : 'badge-pending'}" style="font-size:8px;margin-top:4px;">${tarefa.status}</div>` : ''}
-                            ${isAluno ? `
-                                <div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;">
-                                    ${tarefa.status !== 'Não Feito' ? `
-                                        <button class="btn btn-small btn-success" onclick="updateTaskFromSchedule('${tarefa.id}', 'Realizado')" style="padding:2px 6px;font-size:8px;">✅</button>
-                                        <button class="btn btn-small btn-warning" onclick="updateTaskFromSchedule('${tarefa.id}', 'Em Andamento')" style="padding:2px 6px;font-size:8px;">🔄</button>
-                                        <button class="btn btn-small btn-danger" onclick="marcarNaoFeitoSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">❌</button>
-                                    ` : `
-                                        <button class="btn btn-small btn-success" onclick="recuperarTarefaSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">🔄 Recuperar</button>
-                                    `}
-                                </div>
-                            ` : ''}
-                            ${isAdmin ? `
-                                <button class="delete-activity" onclick="event.stopPropagation(); removeActivitySchedule('${dataAtual}', '${hora}')">×</button>
-                            ` : ''}
-                        </div>
-                    ` : (isAdmin && isEditMode ? `
-                        <div class="empty-cell">Clique para adicionar</div>
-                    ` : '')}
-                </td>
-            </tr>`;
+            dayNames.forEach((nome, idx) => {
+                const diaSemana = nome.toLowerCase();
+                const key = `${diaSemana}_${hora}`;
+                const tarefasDia = tarefasMap[key] || [];
+                const hasTarefa = tarefasDia.length > 0;
+                const tarefa = hasTarefa ? tarefasDia[0] : null;
+                const data = diasDaSemana[idx];
+                
+                // Verificar se esta data está dentro do período do schedule
+                const dataObj = new Date(data);
+                const dataInicioObj = new Date(schedule.dataInicio);
+                const dataFimObj = new Date(schedule.dataFim);
+                const isInPeriodo = dataObj >= dataInicioObj && dataObj <= dataFimObj;
+                
+                // Verificar se o dia da semana está selecionado
+                const diaSemanaSelecionado = schedule.diasSemana && schedule.diasSemana.includes(diaSemana);
+                
+                html += `
+                    <td class="activity-cell ${hasTarefa ? 'has-activity ' + (tarefa.cor || '') : ''}" 
+                        data-dia="${diaSemana}" 
+                        data-hora="${hora}"
+                        data-data="${data}"
+                        onclick="${isAdmin && isEditMode && isInPeriodo && diaSemanaSelecionado ? `handleCellClick('${diaSemana}', '${hora}', '${data}')` : ''}"
+                        style="${!isInPeriodo || !diaSemanaSelecionado ? 'opacity:0.3;cursor:not-allowed;' : (hasTarefa ? '' : 'cursor:default;')}">
+                        ${hasTarefa ? `
+                            <div class="activity-wrapper">
+                                <div class="activity-name">${tarefa.name}</div>
+                                ${tarefa.descricao ? `<div class="activity-subject">${tarefa.descricao}</div>` : ''}
+                                ${tarefa.status ? `<div class="badge ${tarefa.status === 'Realizado' ? 'badge-done' : tarefa.status === 'Em Andamento' ? 'badge-doing' : tarefa.status === 'Não Feito' ? 'badge-notdone' : 'badge-pending'}" style="font-size:8px;margin-top:4px;">${tarefa.status}</div>` : ''}
+                                ${isAluno ? `
+                                    <div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;">
+                                        ${tarefa.status !== 'Não Feito' ? `
+                                            <button class="btn btn-small btn-success" onclick="updateTaskFromSchedule('${tarefa.id}', 'Realizado')" style="padding:2px 6px;font-size:8px;">✅</button>
+                                            <button class="btn btn-small btn-warning" onclick="updateTaskFromSchedule('${tarefa.id}', 'Em Andamento')" style="padding:2px 6px;font-size:8px;">🔄</button>
+                                            <button class="btn btn-small btn-danger" onclick="marcarNaoFeitoSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">❌</button>
+                                        ` : `
+                                            <button class="btn btn-small btn-success" onclick="recuperarTarefaSchedule('${tarefa.id}')" style="padding:2px 6px;font-size:8px;">🔄 Recuperar</button>
+                                        `}
+                                    </div>
+                                ` : ''}
+                                ${isAdmin ? `
+                                    <button class="delete-activity" onclick="event.stopPropagation(); removeActivitySchedule('${diaSemana}', '${hora}', '${data}')">×</button>
+                                ` : ''}
+                            </div>
+                        ` : (isAdmin && isEditMode && isInPeriodo && diaSemanaSelecionado ? `
+                            <div class="empty-cell">Clique para adicionar</div>
+                        ` : (isInPeriodo && diaSemanaSelecionado ? '' : '🔒'))}
+                    </td>
+                `;
+            });
+            
+            html += `</tr>`;
         });
 
         html += `
@@ -1680,10 +1654,6 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
     }
 }
 
-async function changeScheduleDate(scheduleId, view) {
-    await renderScheduleGrid(scheduleId, view);
-}
-
 // ============================================================
 // 📝 FUNÇÕES DE ATIVIDADES
 // ============================================================
@@ -1698,18 +1668,18 @@ function openAddActivityModal() {
         return;
     }
     
-    document.getElementById('activity-dia').textContent = selectedCell.dia || selectedCell.data;
+    document.getElementById('activity-dia').textContent = selectedCell.dia;
     document.getElementById('activity-hora').textContent = selectedCell.hora;
     document.getElementById('activity-modal').classList.remove('hidden');
 }
 
-async function handleCellClick(data, hora) {
+async function handleCellClick(dia, hora, data) {
     if (!isEditMode) {
         showToast('ℹ️ Ative o modo de edição para modificar', 'info');
         return;
     }
 
-    selectedCell = { data, hora };
+    selectedCell = { dia, hora, data };
     openAddActivityModal();
 }
 
@@ -1753,10 +1723,13 @@ async function addActivity() {
 
         // Atualizar as atividades do schedule
         const atividades = schedule.atividades || {};
-        const { data: dataAtual, hora } = selectedCell;
+        const { dia, hora, data: dataSelecionada } = selectedCell;
         
-        // Criar a atividade
-        const atividadeData = {
+        if (!atividades[dia]) {
+            atividades[dia] = {};
+        }
+        
+        atividades[dia][hora] = {
             nome: nome,
             materia: materia || '',
             descricao: descricao || '',
@@ -1784,12 +1757,25 @@ async function addActivity() {
         
         const taskName = materia ? `${nome} - ${materia}` : nome;
 
+        // Verificar se já existe tarefa para esta data/hora
+        const tasksResponse = await fetch(`${API_URL}/tasks/aluno/${alunoId}`);
+        const tasks = await tasksResponse.json();
+        const existingTask = tasks.find(t => t.data === dataSelecionada && t.timeStart === hora && t.scheduleId === currentScheduleId);
+
+        if (existingTask) {
+            showToast('⚠️ Já existe uma tarefa para este horário nesta data!', 'warning');
+            closeActivityModal();
+            await renderScheduleGrid(currentScheduleId, 'adm');
+            return;
+        }
+
         const taskResponse = await fetch(`${API_URL}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 alunoId: alunoId,
-                data: dataAtual,
+                data: dataSelecionada,
+                diaSemana: dia,
                 timeStart: hora,
                 timeEnd: timeEnd,
                 name: taskName,
@@ -1817,8 +1803,8 @@ async function addActivity() {
     }
 }
 
-async function removeActivitySchedule(data, hora) {
-    if (!confirm(`Remover atividade de ${data} às ${hora}?`)) return;
+async function removeActivitySchedule(dia, hora, data) {
+    if (!confirm(`Remover atividade de ${dia} às ${hora} para ${data}?`)) return;
 
     try {
         const alunoId = document.getElementById('adm-schedule-aluno').value;
@@ -1834,10 +1820,12 @@ async function removeActivitySchedule(data, hora) {
 
         if (taskToDelete) {
             await fetch(`${API_URL}/tasks/${taskToDelete.id}`, { method: 'DELETE' });
+            showToast('🗑️ Atividade removida', 'info');
+        } else {
+            showToast('⚠️ Tarefa não encontrada', 'warning');
         }
 
         await renderScheduleGrid(currentScheduleId, 'adm');
-        showToast('🗑️ Atividade removida', 'info');
 
     } catch (error) {
         console.error('Erro ao remover atividade:', error);
@@ -2236,6 +2224,122 @@ async function renderAlunoQuestions() {
 }
 
 // ============================================================
+// 📌 LISTA DE TAREFAS DO ADM COM FILTRO
+// ============================================================
+
+async function admRenderTasks() {
+    const filterAluno = document.getElementById('adm-filter-aluno').value;
+    const filterData = document.getElementById('adm-filter-data').value;
+    const container = document.getElementById('adm-tasks-list');
+    
+    try {
+        const response = await fetch(`${API_URL}/tasks/admin/${currentUser.id}`);
+        let tasks = await response.json();
+        
+        if (filterAluno !== 'all') {
+            tasks = tasks.filter(t => t.alunoId === filterAluno);
+        }
+        
+        if (filterData) {
+            tasks = tasks.filter(t => t.data === filterData);
+        }
+        
+        if (tasks.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma tarefa encontrada</p>';
+            return;
+        }
+        
+        const statusBadges = {
+            'Pendente': 'badge-pending',
+            'Em Andamento': 'badge-doing',
+            'Realizado': 'badge-done',
+            'Não Feito': 'badge-notdone'
+        };
+        
+        tasks.sort((a,b) => {
+            if (a.data !== b.data) return a.data.localeCompare(b.data);
+            return a.timeStart.localeCompare(b.timeStart);
+        });
+        
+        container.innerHTML = tasks.map(t => `
+            <div class="task-item slide-in">
+                <div class="task-info">
+                    <strong>${t.alunoName || 'Aluno'}</strong> • 
+                    <span style="color:var(--text-secondary);">${t.data || 'Sem data'}</span>
+                    <span class="task-time">${t.timeStart} - ${t.timeEnd}</span> | ${t.name}
+                    <br>
+                    <span class="badge ${statusBadges[t.status] || 'badge-pending'}">${t.status || 'Pendente'}</span>
+                    ${t.justification ? `<br><small style="color:var(--accent-red);">📝 ${t.justification}</small>` : ''}
+                </div>
+                <button class="btn btn-small btn-danger" onclick="admDeleteTask('${t.id}')">🗑️</button>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar tarefas:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar tarefas</p>';
+    }
+}
+
+async function admDeleteTask(taskId) {
+    if (!confirm('Deseja realmente excluir esta tarefa?')) return;
+    
+    try {
+        await fetch(`${API_URL}/tasks/${taskId}`, { method: 'DELETE' });
+        await admRenderTasks();
+        showToast('🗑️ Tarefa excluída', 'info');
+    } catch (error) {
+        console.error('Erro ao deletar tarefa:', error);
+        showToast('❌ Erro ao deletar tarefa', 'error');
+    }
+}
+
+// ============================================================
+// 📋 REGISTRO DE ATIVIDADES
+// ============================================================
+
+async function admRenderActivityLog() {
+    const container = document.getElementById('adm-activity-log');
+    
+    try {
+        const response = await fetch(`${API_URL}/logs/admin/${currentUser.id}`);
+        const logs = await response.json();
+        
+        if (logs.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>';
+            return;
+        }
+        
+        const statusEmoji = {
+            'Pendente': '🟡',
+            'Em Andamento': '🔵',
+            'Realizado': '🟢',
+            'Não Feito': '🔴',
+            '-': '🆕'
+        };
+        
+        container.innerHTML = `
+            <div class="history-log">
+                ${logs.map(log => {
+                    const oldEmoji = statusEmoji[log.oldStatus] || '⚪';
+                    const newEmoji = statusEmoji[log.newStatus] || '⚪';
+                    return `
+                        <div class="log-entry">
+                            <strong>${log.timestamp}</strong> - 
+                            ${log.alunoName} | ${log.taskName}<br>
+                            ${oldEmoji} ${log.oldStatus} → ${newEmoji} ${log.newStatus}
+                            ${log.justification ? `<br><small>📝 ${log.justification}</small>` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erro ao carregar logs:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar logs</p>';
+    }
+}
+
+// ============================================================
 // 🎨 RENDERIZAÇÃO PRINCIPAL
 // ============================================================
 
@@ -2253,7 +2357,6 @@ async function renderAll() {
         
         if (currentUser.role === 'adm') {
             await admRenderTasks();
-            await admRenderQuestions();
             await admRenderActivityLog();
             await updateAdmAlunosList();
             await updateAdmSelects();
