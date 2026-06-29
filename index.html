@@ -2152,9 +2152,12 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         console.log(`🔄 Atualizando tarefa - ID original: ${taskId}, ID limpo: ${taskIdClean}, ID numérico: ${taskIdNum}`);
         console.log(`📝 Novo status: "${newStatus}"`);
         
+        if (isNaN(taskIdNum)) {
+            throw new Error('ID da tarefa inválido');
+        }
+        
         showToast('⏳ Atualizando status...', 'info');
         
-        // Usar o ID numérico na URL
         const response = await fetch(`${API_URL}/tasks/${taskIdNum}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
