@@ -223,7 +223,7 @@ app.post('/api/tasks', async (req, res) => {
       {
         alunoId,
         taskId,
-        logId: Date.now() + 1,
+        logId: String(Date.now() + 1),
         timestamp,
         alunoName,
         taskName: name
@@ -285,20 +285,41 @@ app.get('/api/tasks/admin/:admId', async (req, res) => {
   }
 });
 
-// ============ ATUALIZAR STATUS DA TAREFA ============
+// ============ ATUALIZAR STATUS DA TAREFA (CORRIGIDA) ============
 app.put('/api/tasks/:taskId/status', async (req, res) => {
   const { taskId } = req.params;
   const { status, justification, alunoId } = req.body;
 
   try {
-    console.log(`🔄 Atualizando tarefa ${taskId} para status: ${status}`);
-    console.log(`📝 Dados recebidos:`, { taskId, status, justification, alunoId });
-
-    // Verificar se a tarefa existe
-    const checkResult = await runQuery(
-      'MATCH (t:Task {id: $taskId}) RETURN t',
-      { taskId }
+    console.log(`🔄 Atualizando tarefa ID: ${taskId} para status: ${status}`);
+    
+    // Tentar encontrar a tarefa com o ID como string ou número
+    let checkResult = await runQuery(
+      `MATCH (t:Task) WHERE toString(t.id) = $taskIdStr OR t.id = $taskIdNum RETURN t`,
+      { 
+        taskIdStr: String(taskId),
+        taskIdNum: parseInt(taskId) || 0
+      }
     );
+
+    // Se não encontrou, tentar buscar com o ID exato como string
+    if (checkResult.records.length === 0) {
+      checkResult = await runQuery(
+        'MATCH (t:Task {id: $taskId}) RETURN t',
+        { taskId: String(taskId) }
+      );
+    }
+
+    // Se ainda não encontrou, tentar como número
+    if (checkResult.records.length === 0) {
+      const numericId = parseInt(taskId);
+      if (!isNaN(numericId)) {
+        checkResult = await runQuery(
+          'MATCH (t:Task {id: $taskId}) RETURN t',
+          { taskId: numericId }
+        );
+      }
+    }
 
     if (checkResult.records.length === 0) {
       console.log(`❌ Tarefa ${taskId} não encontrada`);
@@ -308,8 +329,10 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     const task = checkResult.records[0].get('t').properties;
     const oldStatus = task.status;
     const taskName = task.name;
+    const taskRealId = task.id;
 
-    console.log(`📝 Status antigo: ${oldStatus}`);
+    console.log(`📝 Tarefa encontrada: ${taskName} (ID: ${taskRealId})`);
+    console.log(`📝 Status antigo: ${oldStatus} → Novo: ${status}`);
 
     // Atualizar o status
     await runQuery(
@@ -319,7 +342,11 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
           t.justification = $justification
       RETURN t
       `,
-      { taskId, status, justification: justification || '' }
+      { 
+        taskId: taskRealId, 
+        status, 
+        justification: justification || '' 
+      }
     );
 
     // Buscar nome do aluno
@@ -327,7 +354,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       'MATCH (u:User {id: $alunoId}) RETURN u.name',
       { alunoId }
     );
-    const alunoName = alunoResult.records[0].get('u.name');
+    const alunoName = alunoResult.records.length > 0 ? alunoResult.records[0].get('u.name') : 'Aluno';
 
     // Criar log
     const timestamp = new Date().toLocaleString('pt-BR');
@@ -349,7 +376,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
       `,
       {
         alunoId,
-        taskId,
+        taskId: taskRealId,
         logId: String(Date.now() + 1),
         timestamp,
         oldStatus,
@@ -390,7 +417,7 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
     // Retornar a tarefa atualizada
     const updatedResult = await runQuery(
       'MATCH (t:Task {id: $taskId}) RETURN t',
-      { taskId }
+      { taskId: taskRealId }
     );
     const updatedTask = updatedResult.records[0].get('t').properties;
 
@@ -403,9 +430,31 @@ app.put('/api/tasks/:taskId/status', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erro ao atualizar tarefa:', error);
-    res.status(500).json({ error: 'Erro ao atualizar status da tarefa' });
+    res.status(500).json({ error: 'Erro ao atualizar status da tarefa: ' + error.message });
   }
 });
+
+// Deletar tarefa
+app.delete('/api/tasks/:taskId', async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    await runQuery(
+      `
+      MATCH (t:Task {id: $taskId})
+      OPTIONAL MATCH (t)-[:TEM_LOG]-(l:Log)
+      DETACH DELETE t, l
+      `,
+      { taskId: parseInt(taskId) || taskId }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao deletar tarefa:', error);
+    res.status(500).json({ error: 'Erro ao deletar tarefa' });
+  }
+});
+
 // ============ DÚVIDAS ============
 // Enviar dúvida
 app.post('/api/questions', async (req, res) => {
@@ -509,7 +558,7 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
           q.status = 'Respondida'
       RETURN q
       `,
-      { questionId, answer }
+      { questionId: parseInt(questionId) || questionId, answer }
     );
 
     res.json({ success: true });
@@ -572,22 +621,18 @@ app.post('/api/achievements/check', async (req, res) => {
     
     const achievs = aluno.achievements || [];
     let changed = false;
-    let newAchievements = [];
     
     if (doneTasks >= 5 && !achievs.includes('ach1')) {
       achievs.push('ach1');
       changed = true;
-      newAchievements.push('🏆 Mestre das Tarefas');
     }
     if (totalQuestions >= 3 && !achievs.includes('ach2')) {
       achievs.push('ach2');
       changed = true;
-      newAchievements.push('💡 Curioso');
     }
     if (recoveredTasks >= 1 && !achievs.includes('ach3')) {
       achievs.push('ach3');
       changed = true;
-      newAchievements.push('🔄 Segunda Chance');
     }
     
     if (changed) {
@@ -603,12 +648,34 @@ app.post('/api/achievements/check', async (req, res) => {
     
     res.json({ 
       achievements: achievs, 
-      changed,
-      newAchievements 
+      changed 
     });
   } catch (error) {
     console.error('Erro ao verificar conquistas:', error);
     res.status(500).json({ error: 'Erro ao verificar conquistas' });
+  }
+});
+
+// ============ ROTA DE DEBUG ============
+app.get('/api/debug/tasks', async (req, res) => {
+  try {
+    const result = await runQuery(`
+      MATCH (t:Task)
+      RETURN t.id, t.name, t.status, t.day
+      ORDER BY t.id
+    `);
+    
+    const tasks = result.records.map(r => ({
+      id: r.get('t.id'),
+      name: r.get('t.name'),
+      status: r.get('t.status'),
+      day: r.get('t.day'),
+      tipo: typeof r.get('t.id')
+    }));
+    
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -635,7 +702,7 @@ async function initDatabase() {
       console.log('Criando usuários padrão...');
       await runQuery(`
         CREATE (adm:User {id: 'adm_david', name: 'David', password: 'david0724', role: 'adm'})
-        CREATE (aluno:User {id: 'aluno_malu', name: 'Malu', password: '300504', role: 'aluno', xp: 0, level: 1, achievements: []})
+        CREATE (aluno:User {id: 'aluno_malu', name: 'Malu', password: 'Malu123', role: 'aluno', xp: 0, level: 1, achievements: []})
         CREATE (adm)-[:VINCULA]->(aluno)
       `);
       console.log('Usuários padrão criados!');
@@ -648,10 +715,10 @@ async function initDatabase() {
 // Inicializar banco
 initDatabase();
 
-// Servir arquivos estáticos (HTML)
+// Servir arquivos estáticos
 app.use(express.static('.'));
 
-// Rota para servir o index.html
+// Rota principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
