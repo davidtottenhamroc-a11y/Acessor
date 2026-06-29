@@ -1239,7 +1239,7 @@ async function selectDay(day) {
 }
 
 // ============================================================
-// 🎯 RENDERIZAR TAREFAS DO ALUNO (VERSÃO CORRIGIDA)
+// 🎯 RENDERIZAR TAREFAS DO ALUNO (CORRIGIDA)
 // ============================================================
 
 async function renderAlunoTasksByDay(day) {
@@ -1267,9 +1267,8 @@ async function renderAlunoTasksByDay(day) {
         tasks.sort((a,b) => a.timeStart.localeCompare(b.timeStart));
         
         container.innerHTML = tasks.map(t => {
-            // Garantir que o ID seja tratado como string
             const taskId = String(t.id);
-            console.log(`🆔 Tarefa ID: ${taskId} (tipo: ${typeof taskId})`);
+            console.log(`🆔 Tarefa: ${t.name}, ID: ${taskId} (tipo original: ${typeof t.id})`);
             
             return `
                 <div class="task-item slide-in" id="task-${taskId}">
@@ -1313,7 +1312,6 @@ async function renderAlunoTasksByDay(day) {
 // ============================================================
 
 async function alunoUpdateTaskStatus(taskId, newStatus) {
-    // Evitar múltiplas requisições simultâneas
     if (isUpdating) {
         showToast('⏳ Aguarde, processando...', 'warning');
         return;
@@ -1325,7 +1323,6 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
         
         console.log(`🔄 [${new Date().toLocaleTimeString()}] Atualizando tarefa ${taskIdStr} para "${newStatus}"`);
         
-        // Desabilitar botões para evitar cliques duplos
         const taskElement = document.getElementById(`task-${taskIdStr}`);
         if (taskElement) {
             const buttons = taskElement.querySelectorAll('.btn');
@@ -1345,37 +1342,39 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
         });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao atualizar status');
+            const errorText = await response.text();
+            let errorMessage = 'Erro ao atualizar status';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch (e) {
+                errorMessage = errorText || errorMessage;
+            }
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
         console.log('✅ Resposta do servidor:', data);
         
         if (data.success) {
-            // Recarregar dados do usuário
             await loadAlunoData();
             updateAlunoXP();
             await checkAchievements();
-            
-            // Recarregar a lista de tarefas
             await renderAlunoTasksByDay(selectedDay);
             
-            // Mostrar toast com XP ganho
             if (data.xpGanho > 0) {
                 showToast(`✅ Status atualizado! +${data.xpGanho} XP ⚡`, 'success');
             } else {
                 showToast(`✅ Status atualizado para "${newStatus}"`, 'success');
             }
         } else {
-            throw new Error('Erro ao atualizar status');
+            throw new Error(data.message || 'Erro ao atualizar status');
         }
         
     } catch (error) {
         console.error('❌ Erro ao atualizar status:', error);
         showToast('❌ ' + error.message, 'error');
         
-        // Reabilitar botões
         const taskIdStr = String(taskId);
         const taskElement = document.getElementById(`task-${taskIdStr}`);
         if (taskElement) {
@@ -1388,7 +1387,7 @@ async function alunoUpdateTaskStatus(taskId, newStatus) {
 }
 
 // ============================================================
-// FUNÇÃO PARA MARCAR COMO NÃO FEITO (CORRIGIDA)
+// FUNÇÃO PARA MARCAR COMO NÃO FEITO
 // ============================================================
 
 function alunoMarkNotDone(taskId) {
@@ -1432,9 +1431,6 @@ async function confirmNotDone() {
             throw new Error(error.error || 'Erro ao atualizar status');
         }
         
-        const data = await response.json();
-        console.log('✅ Tarefa marcada como Não Feito:', data);
-        
         await loadAlunoData();
         updateAlunoXP();
         await renderAlunoTasksByDay(selectedDay);
@@ -1456,7 +1452,7 @@ function closeJustifyModal() {
 }
 
 // ============================================================
-// FUNÇÃO PARA RECUPERAR TAREFA (CORRIGIDA)
+// FUNÇÃO PARA RECUPERAR TAREFA
 // ============================================================
 
 function alunoRecoverTask(taskId) {
@@ -1499,9 +1495,6 @@ async function confirmRecover() {
             const error = await response.json();
             throw new Error(error.error || 'Erro ao recuperar tarefa');
         }
-        
-        const data = await response.json();
-        console.log('✅ Tarefa recuperada:', data);
         
         await loadAlunoData();
         updateAlunoXP();
