@@ -30,8 +30,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('.'));
 
-// Helper para executar queries
-const runQuery = async (query, params = {}) => {
+// Helper para executar queries com timeout
+const runQuery = async (query, params = {}, timeout = 30000) => {
   if (!driver) {
     throw new Error('Driver Neo4j não inicializado');
   }
@@ -880,9 +880,27 @@ app.delete('/api/schedules/:scheduleId', async (req, res) => {
   }
 });
 
+// ============ DEBUG - LISTAR TODAS AS ROTAS ============
+app.get('/api/routes', (req, res) => {
+  const routes = [];
+  
+  app._router.stack.forEach((layer) => {
+    if (layer.route) {
+      const methods = Object.keys(layer.route.methods).join(', ').toUpperCase();
+      routes.push(`${methods} ${layer.route.path}`);
+    }
+  });
+  
+  res.json({ routes });
+});
+
 // ============ INICIALIZAÇÃO DO BANCO ============
 
+let dbInitialized = false;
+
 async function initDatabase() {
+  if (dbInitialized) return;
+  
   try {
     if (!driver) {
       console.error('❌ Driver não disponível para inicialização');
@@ -925,6 +943,8 @@ async function initDatabase() {
       } else {
         console.log(`✅ Banco já possui ${count} usuários`);
       }
+      
+      dbInitialized = true;
     } finally {
       await session.close();
     }
