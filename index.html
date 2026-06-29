@@ -61,9 +61,14 @@
             50% { transform: scale(1.2); color: var(--accent-gold); }
             100% { transform: scale(1); }
         }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         .fade-in-up { animation: fadeInUp 0.5s ease-out; }
         .slide-in { animation: slideIn 0.4s ease-out; }
+        .slide-down { animation: slideDown 0.3s ease-out; }
 
         .app-container {
             max-width: 1200px;
@@ -317,6 +322,8 @@
             max-width: 500px;
             width: 90%;
             box-shadow: var(--shadow);
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .modal h3 { margin-bottom: 15px; }
 
@@ -482,16 +489,284 @@
         .mt-1 { margin-top: 10px; }
         .mt-2 { margin-top: 20px; }
 
+        /* Estilos da Grade Horária */
+        .schedule-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 900px;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid var(--border-color);
+            padding: 6px 4px;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .schedule-table th {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 11px;
+            padding: 8px 4px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .schedule-table .hour-cell {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 10px;
+            min-width: 60px;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+
+        .schedule-table .activity-cell {
+            background: var(--bg-input);
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 35px;
+            font-size: 10px;
+            position: relative;
+            min-width: 80px;
+        }
+
+        .schedule-table .activity-cell:hover {
+            background: rgba(124,77,255,0.15);
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        .schedule-table .activity-cell.has-activity {
+            background: rgba(79,195,247,0.12);
+            border-color: var(--accent-blue);
+        }
+
+        .schedule-table .activity-cell .activity-wrapper {
+            position: relative;
+            padding: 4px;
+            min-height: 30px;
+        }
+
+        .schedule-table .activity-cell .activity-name {
+            font-weight: 700;
+            color: var(--accent-blue);
+            font-size: 10px;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .schedule-table .activity-cell .activity-subject {
+            font-size: 9px;
+            color: var(--text-secondary);
+            line-height: 1.2;
+        }
+
+        .schedule-table .activity-cell .activity-time {
+            font-size: 8px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .schedule-table .activity-cell .delete-activity {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--accent-red);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        .schedule-table .activity-cell:hover .delete-activity {
+            display: flex;
+        }
+
+        .schedule-table .activity-cell .empty-cell {
+            color: var(--text-secondary);
+            font-size: 9px;
+            opacity: 0.3;
+        }
+
+        /* Cores das atividades */
+        .activity-color-1 { background: rgba(79,195,247,0.2) !important; border-left: 3px solid #4fc3f7; }
+        .activity-color-2 { background: rgba(105,240,174,0.2) !important; border-left: 3px solid #69f0ae; }
+        .activity-color-3 { background: rgba(255,171,64,0.2) !important; border-left: 3px solid #ffab40; }
+        .activity-color-4 { background: rgba(255,82,82,0.2) !important; border-left: 3px solid #ff5252; }
+        .activity-color-5 { background: rgba(124,77,255,0.2) !important; border-left: 3px solid #7c4dff; }
+        .activity-color-6 { background: rgba(255,215,64,0.2) !important; border-left: 3px solid #ffd740; }
+        .activity-color-7 { background: rgba(0,188,212,0.2) !important; border-left: 3px solid #00bcd4; }
+        .activity-color-8 { background: rgba(255,112,67,0.2) !important; border-left: 3px solid #ff7043; }
+
+        .schedule-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .schedule-controls select,
+        .schedule-controls input {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .schedule-controls .btn {
+            white-space: nowrap;
+        }
+
+        .schedule-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .schedule-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .schedule-item:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .schedule-item.active {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+            background: rgba(124,77,255,0.1);
+        }
+
+        .schedule-item .schedule-name {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .schedule-item .schedule-date {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .schedule-item .schedule-badge {
+            background: var(--accent-purple);
+            color: white;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 9px;
+        }
+
+        .edit-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .edit-mode-toggle .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .edit-mode-toggle .toggle-switch.active {
+            background: var(--accent-purple);
+        }
+
+        .edit-mode-toggle .toggle-switch .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .edit-mode-toggle .toggle-switch.active .toggle-knob {
+            left: 22px;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .grid-week { grid-template-columns: repeat(3, 1fr); }
             .app-header { flex-direction: column; text-align: center; }
             .task-item { flex-direction: column; align-items: stretch; }
             .task-actions { justify-content: center; }
+            .schedule-table { font-size: 10px; min-width: 700px; }
+            .schedule-table th,
+            .schedule-table td { padding: 4px 2px; min-width: 40px; }
+            .schedule-table .activity-cell .activity-name { font-size: 8px; }
+            .schedule-controls { flex-direction: column; }
+            .schedule-controls select,
+            .schedule-controls input { min-width: 100%; }
         }
         @media (max-width: 480px) {
             .grid-week { grid-template-columns: repeat(2, 1fr); }
             .btn { padding: 8px 14px; font-size: 12px; }
+            .schedule-table { min-width: 600px; font-size: 9px; }
         }
     </style>
 </head>
@@ -602,6 +877,35 @@
                 </div>
             </div>
 
+            <!-- SEÇÃO DE HORÁRIOS - VIEW ADM -->
+            <div class="card mt-2">
+                <div class="card-title">📅 Gerenciar Horários</div>
+                
+                <div class="schedule-controls">
+                    <select id="adm-schedule-aluno" class="mb-1" onchange="admLoadSchedules()">
+                        <option value="">Selecione o aluno</option>
+                    </select>
+                    <input type="text" id="adm-schedule-name" placeholder="Nome do horário (ex: Semana 1)" class="mb-1">
+                    <button class="btn btn-primary" onclick="admCreateSchedule()">
+                        ➕ Criar Horário
+                    </button>
+                </div>
+                
+                <div id="adm-schedules-list" class="schedule-list"></div>
+                
+                <div class="edit-mode-toggle">
+                    <span style="font-size:13px;">✏️ Modo Edição</span>
+                    <div class="toggle-switch" onclick="toggleEditMode()" id="edit-toggle">
+                        <div class="toggle-knob"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-secondary);" id="edit-mode-label">Desativado</span>
+                </div>
+                
+                <div class="schedule-container" id="adm-schedule-display">
+                    <p style="color:var(--text-secondary);">Selecione ou crie um horário para editar</p>
+                </div>
+            </div>
+
             <div class="card mt-2">
                 <div class="card-title">📋 Registro de Atividades dos Alunos</div>
                 <div id="adm-activity-log">
@@ -659,6 +963,15 @@
                 </div>
             </div>
 
+            <!-- SEÇÃO DE HORÁRIOS - VIEW ALUNO -->
+            <div class="card">
+                <div class="card-title">📅 Meus Horários</div>
+                <div id="aluno-schedules-list" class="schedule-list"></div>
+                <div class="schedule-container" id="aluno-schedule-display">
+                    <p style="color:var(--text-secondary);">Selecione um horário para visualizar</p>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-title">💬 Minhas Dúvidas</div>
                 <textarea id="aluno-question-text" placeholder="Digite sua dúvida aqui..."></textarea>
@@ -708,6 +1021,44 @@
     </div>
 </div>
 
+<!-- MODAL ADICIONAR ATIVIDADE -->
+<div id="activity-modal" class="modal-overlay hidden">
+    <div class="modal fade-in-up">
+        <h3>📝 Adicionar Atividade</h3>
+        <p style="color:var(--text-secondary);margin-bottom:15px;">
+            <span id="activity-dia"></span> às <span id="activity-hora"></span>
+        </p>
+        
+        <input type="text" id="activity-nome" class="mb-1" placeholder="Nome da atividade (ex: Matemática)">
+        <input type="text" id="activity-materia" class="mb-1" placeholder="Matéria (opcional)">
+        <textarea id="activity-descricao" class="mb-1" placeholder="Descrição (opcional)" rows="2"></textarea>
+        
+        <div style="margin-bottom:15px;">
+            <label style="font-size:12px;color:var(--text-secondary);">🎨 Cor:</label>
+            <div class="color-picker" id="modal-color-picker">
+                <div class="color-option activity-color-1 selected" style="background:#4fc3f7;" onclick="selectModalColor('activity-color-1')" title="Azul"></div>
+                <div class="color-option activity-color-2" style="background:#69f0ae;" onclick="selectModalColor('activity-color-2')" title="Verde"></div>
+                <div class="color-option activity-color-3" style="background:#ffab40;" onclick="selectModalColor('activity-color-3')" title="Laranja"></div>
+                <div class="color-option activity-color-4" style="background:#ff5252;" onclick="selectModalColor('activity-color-4')" title="Vermelho"></div>
+                <div class="color-option activity-color-5" style="background:#7c4dff;" onclick="selectModalColor('activity-color-5')" title="Roxo"></div>
+                <div class="color-option activity-color-6" style="background:#ffd740;" onclick="selectModalColor('activity-color-6')" title="Amarelo"></div>
+                <div class="color-option activity-color-7" style="background:#00bcd4;" onclick="selectModalColor('activity-color-7')" title="Ciano"></div>
+                <div class="color-option activity-color-8" style="background:#ff7043;" onclick="selectModalColor('activity-color-8')" title="Coral"></div>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button class="btn btn-success" onclick="addActivity()" style="flex:1;justify-content:center;">
+                ✅ Adicionar
+            </button>
+            <button class="btn" onclick="closeActivityModal()" 
+                    style="flex:1;justify-content:center;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script>
@@ -724,6 +1075,21 @@ let selectedRole = null;
 let pendingTaskId = null;
 let selectedDay = null;
 let isUpdating = false;
+
+// ============================================================
+// 📅 VARIÁVEIS DO SISTEMA DE HORÁRIOS
+// ============================================================
+let currentScheduleId = null;
+let isEditMode = false;
+let selectedCell = null;
+let modalSelectedColor = 'activity-color-1';
+
+const DIAS_SEMANA = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+const HORARIOS_PADRAO = [
+    '7:00', '8:00', '9:00', '10:00', '11:00', '12:00', 
+    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', 
+    '19:00', '20:00', '21:00', '22:00'
+];
 
 // ============================================================
 // 🎯 LOGIN
@@ -792,6 +1158,7 @@ function logout() {
     currentUser = null;
     selectedRole = null;
     selectedDay = null;
+    currentScheduleId = null;
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('main-panel').classList.add('hidden');
     document.getElementById('adm-view').classList.add('hidden');
@@ -809,6 +1176,8 @@ function logout() {
 async function setupAdmView() {
     await updateAdmAlunosList();
     await updateAdmSelects();
+    await updateAdmScheduleSelect();
+    await admLoadSchedules();
 }
 
 async function updateAdmAlunosList() {
@@ -856,6 +1225,21 @@ async function updateAdmSelects() {
     }
 }
 
+async function updateAdmScheduleSelect() {
+    try {
+        const response = await fetch(`${API_URL}/users/alunos/${currentUser.id}`);
+        const alunos = await response.json();
+        
+        const selectAluno = document.getElementById('adm-schedule-aluno');
+        selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+        alunos.forEach(a => {
+            selectAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+        });
+    } catch (error) {
+        console.error('Erro ao carregar select de horários:', error);
+    }
+}
+
 async function admCadastrarAluno() {
     const name = document.getElementById('new-aluno-name').value.trim();
     const password = document.getElementById('new-aluno-password').value.trim();
@@ -885,6 +1269,7 @@ async function admCadastrarAluno() {
         
         await updateAdmAlunosList();
         await updateAdmSelects();
+        await updateAdmScheduleSelect();
         await renderAll();
         showToast(`✅ Aluno "${name}" cadastrado com sucesso!`, 'success');
     } catch (error) {
@@ -905,6 +1290,7 @@ async function admRemoverAluno(alunoId) {
         
         await updateAdmAlunosList();
         await updateAdmSelects();
+        await updateAdmScheduleSelect();
         await renderAll();
         showToast('🗑️ Aluno removido', 'info');
     } catch (error) {
@@ -1125,6 +1511,7 @@ async function setupAlunoView() {
     await loadAlunoData();
     updateAlunoXP();
     await checkAchievements();
+    await alunoLoadSchedules();
 }
 
 async function loadAlunoData() {
@@ -1239,7 +1626,7 @@ async function selectDay(day) {
 }
 
 // ============================================================
-// 🎯 RENDERIZAR TAREFAS DO ALUNO (CORRIGIDA)
+// 🎯 RENDERIZAR TAREFAS DO ALUNO
 // ============================================================
 
 async function renderAlunoTasksByDay(day) {
@@ -1268,7 +1655,6 @@ async function renderAlunoTasksByDay(day) {
         
         container.innerHTML = tasks.map(t => {
             const taskId = String(t.id);
-            console.log(`🆔 Tarefa: ${t.name}, ID: ${taskId} (tipo original: ${typeof t.id})`);
             
             return `
                 <div class="task-item slide-in" id="task-${taskId}">
@@ -1308,7 +1694,7 @@ async function renderAlunoTasksByDay(day) {
 }
 
 // ============================================================
-// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS (CORRIGIDA)
+// 🎯 FUNÇÃO PRINCIPAL - ATUALIZAR STATUS
 // ============================================================
 
 async function alunoUpdateTaskStatus(taskId, newStatus) {
@@ -1518,6 +1904,403 @@ function closeRecoverModal() {
 }
 
 // ============================================================
+// 📅 SISTEMA DE HORÁRIOS
+// ============================================================
+
+// ============ FUNÇÕES DO ADM ============
+
+async function admLoadSchedules() {
+    try {
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        if (!alunoId) {
+            document.getElementById('adm-schedules-list').innerHTML = 
+                '<p style="color:var(--text-secondary);">Selecione um aluno</p>';
+            return;
+        }
+
+        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
+        const schedules = await response.json();
+
+        const container = document.getElementById('adm-schedules-list');
+        
+        if (schedules.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum horário criado</p>';
+            return;
+        }
+
+        container.innerHTML = schedules.map(s => `
+            <div class="schedule-item ${s.id === currentScheduleId ? 'active' : ''}" 
+                 onclick="admSelectSchedule('${s.id}')">
+                <span class="schedule-name">📋 ${s.nome}</span>
+                <span class="schedule-date">${s.created_at || ''}</span>
+                <span class="schedule-badge">${Object.keys(s.dias || {}).length} dias</span>
+                <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); admDeleteSchedule('${s.id}')">🗑️</button>
+            </div>
+        `).join('');
+
+        if (schedules.length > 0 && !currentScheduleId) {
+            admSelectSchedule(schedules[0].id);
+        } else if (schedules.length > 0 && currentScheduleId) {
+            // Verificar se o schedule atual ainda existe
+            const exists = schedules.some(s => s.id === currentScheduleId);
+            if (!exists) {
+                admSelectSchedule(schedules[0].id);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar horários:', error);
+    }
+}
+
+async function admCreateSchedule() {
+    const alunoId = document.getElementById('adm-schedule-aluno').value;
+    const nome = document.getElementById('adm-schedule-name').value.trim();
+
+    if (!alunoId) {
+        showToast('⚠️ Selecione um aluno!', 'warning');
+        return;
+    }
+    if (!nome) {
+        showToast('⚠️ Digite um nome para o horário!', 'warning');
+        return;
+    }
+
+    try {
+        const dias = {};
+        DIAS_SEMANA.forEach(dia => {
+            dias[dia] = {};
+            HORARIOS_PADRAO.forEach(hora => {
+                dias[dia][hora] = null;
+            });
+        });
+
+        const response = await fetch(`${API_URL}/schedules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alunoId, nome, dias })
+        });
+
+        const schedule = await response.json();
+        document.getElementById('adm-schedule-name').value = '';
+        await admLoadSchedules();
+        admSelectSchedule(schedule.id);
+        showToast('✅ Horário criado com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao criar horário:', error);
+        showToast('❌ Erro ao criar horário', 'error');
+    }
+}
+
+async function admSelectSchedule(scheduleId) {
+    currentScheduleId = scheduleId;
+    await admLoadSchedules();
+    await renderScheduleGrid(scheduleId, 'adm');
+}
+
+async function admDeleteSchedule(scheduleId) {
+    if (!confirm('Deseja realmente excluir este horário?')) return;
+
+    try {
+        await fetch(`${API_URL}/schedules/${scheduleId}`, { method: 'DELETE' });
+        currentScheduleId = null;
+        await admLoadSchedules();
+        document.getElementById('adm-schedule-display').innerHTML = 
+            '<p style="color:var(--text-secondary);">Selecione ou crie um horário para editar</p>';
+        showToast('🗑️ Horário excluído', 'info');
+    } catch (error) {
+        console.error('Erro ao deletar horário:', error);
+        showToast('❌ Erro ao deletar horário', 'error');
+    }
+}
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const toggle = document.getElementById('edit-toggle');
+    const label = document.getElementById('edit-mode-label');
+    
+    toggle.classList.toggle('active', isEditMode);
+    label.textContent = isEditMode ? 'Ativado' : 'Desativado';
+    
+    if (currentScheduleId) {
+        renderScheduleGrid(currentScheduleId, 'adm');
+    }
+}
+
+function selectModalColor(colorId) {
+    modalSelectedColor = colorId;
+    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
+        el.classList.toggle('selected', el.className.includes(colorId));
+    });
+}
+
+// ============ RENDERIZAR GRADE HORÁRIA ============
+
+async function renderScheduleGrid(scheduleId, view = 'adm') {
+    const container = document.getElementById(
+        view === 'adm' ? 'adm-schedule-display' : 'aluno-schedule-display'
+    );
+
+    try {
+        // Buscar o schedule específico
+        let schedules = [];
+        if (view === 'adm') {
+            const alunoId = document.getElementById('adm-schedule-aluno').value;
+            if (!alunoId) {
+                container.innerHTML = '<p style="color:var(--text-secondary);">Selecione um aluno primeiro</p>';
+                return;
+            }
+            const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
+            schedules = await response.json();
+        } else {
+            const response = await fetch(`${API_URL}/schedules/aluno/${currentUser.id}`);
+            schedules = await response.json();
+        }
+
+        const schedule = schedules.find(s => s.id === scheduleId);
+
+        if (!schedule) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Horário não encontrado</p>';
+            return;
+        }
+
+        const dias = schedule.dias || {};
+        const isAdmin = view === 'adm';
+
+        let html = `
+            <div class="schedule-container">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+                    <div>
+                        <h4 style="color:var(--accent-blue);font-size:16px;">${schedule.nome}</h4>
+                        <span style="font-size:11px;color:var(--text-secondary);">Criado em: ${schedule.created_at || 'N/A'}</span>
+                    </div>
+                    ${isAdmin ? `
+                        <button class="btn btn-small btn-success" onclick="openAddActivityModal()">
+                            ➕ Adicionar Atividade
+                        </button>
+                    ` : ''}
+                </div>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width:60px;">HORÁRIO</th>
+                            ${DIAS_SEMANA.map(dia => `<th>${dia}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        HORARIOS_PADRAO.forEach(hora => {
+            html += `<tr><td class="hour-cell">${hora}</td>`;
+            
+            DIAS_SEMANA.forEach(dia => {
+                const activity = dias[dia] && dias[dia][hora];
+                const hasActivity = activity && activity.nome;
+                const colorClass = activity && activity.cor ? activity.cor : '';
+                
+                html += `
+                    <td class="activity-cell ${hasActivity ? 'has-activity ' + colorClass : ''}" 
+                        data-dia="${dia}" 
+                        data-hora="${hora}"
+                        onclick="${isAdmin ? `handleCellClick('${dia}', '${hora}')` : ''}"
+                        style="${hasActivity ? '' : 'cursor:default;'}">
+                        ${hasActivity ? `
+                            <div class="activity-wrapper">
+                                <div class="activity-name">${activity.nome}</div>
+                                ${activity.materia ? `<div class="activity-subject">${activity.materia}</div>` : ''}
+                                ${activity.descricao ? `<div class="activity-subject" style="font-size:8px;opacity:0.7;">${activity.descricao}</div>` : ''}
+                                ${isAdmin ? `
+                                    <button class="delete-activity" onclick="event.stopPropagation(); removeActivity('${dia}', '${hora}')">×</button>
+                                ` : ''}
+                            </div>
+                        ` : (isAdmin && isEditMode ? `
+                            <div class="empty-cell">Clique para adicionar</div>
+                        ` : '')}
+                    </td>
+                `;
+            });
+            
+            html += `</tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error('Erro ao renderizar grade:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar grade</p>';
+    }
+}
+
+// ============ FUNÇÕES DE EDIÇÃO ============
+
+function openAddActivityModal() {
+    if (!isEditMode) {
+        showToast('ℹ️ Ative o modo de edição para adicionar atividades', 'info');
+        return;
+    }
+    if (!selectedCell) {
+        showToast('ℹ️ Clique em uma célula primeiro', 'info');
+        return;
+    }
+    
+    document.getElementById('activity-dia').textContent = selectedCell.dia;
+    document.getElementById('activity-hora').textContent = selectedCell.hora;
+    document.getElementById('activity-modal').classList.remove('hidden');
+}
+
+async function handleCellClick(dia, hora) {
+    if (!isEditMode) {
+        showToast('ℹ️ Ative o modo de edição para modificar', 'info');
+        return;
+    }
+
+    selectedCell = { dia, hora };
+    openAddActivityModal();
+}
+
+async function addActivity() {
+    const nome = document.getElementById('activity-nome').value.trim();
+    const materia = document.getElementById('activity-materia').value.trim();
+    const descricao = document.getElementById('activity-descricao').value.trim();
+
+    if (!selectedCell) {
+        showToast('⚠️ Selecione uma célula!', 'warning');
+        return;
+    }
+
+    if (!nome) {
+        showToast('⚠️ Digite o nome da atividade!', 'warning');
+        return;
+    }
+
+    try {
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
+        const schedules = await response.json();
+        const schedule = schedules.find(s => s.id === currentScheduleId);
+
+        if (!schedule) {
+            showToast('❌ Horário não encontrado', 'error');
+            return;
+        }
+
+        const dias = schedule.dias || {};
+        const { dia, hora } = selectedCell;
+        
+        if (!dias[dia]) dias[dia] = {};
+        
+        dias[dia][hora] = {
+            nome,
+            materia: materia || '',
+            descricao: descricao || '',
+            cor: modalSelectedColor
+        };
+
+        await fetch(`${API_URL}/schedules/${currentScheduleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: schedule.nome, dias })
+        });
+
+        closeActivityModal();
+        await renderScheduleGrid(currentScheduleId, 'adm');
+        showToast('✅ Atividade adicionada!', 'success');
+
+    } catch (error) {
+        console.error('Erro ao adicionar atividade:', error);
+        showToast('❌ Erro ao adicionar atividade', 'error');
+    }
+}
+
+async function removeActivity(dia, hora) {
+    if (!confirm(`Remover atividade de ${dia} às ${hora}?`)) return;
+
+    try {
+        const alunoId = document.getElementById('adm-schedule-aluno').value;
+        const response = await fetch(`${API_URL}/schedules/aluno/${alunoId}`);
+        const schedules = await response.json();
+        const schedule = schedules.find(s => s.id === currentScheduleId);
+
+        if (!schedule) {
+            showToast('❌ Horário não encontrado', 'error');
+            return;
+        }
+
+        const dias = schedule.dias || {};
+        if (dias[dia] && dias[dia][hora]) {
+            dias[dia][hora] = null;
+        }
+
+        await fetch(`${API_URL}/schedules/${currentScheduleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: schedule.nome, dias })
+        });
+
+        await renderScheduleGrid(currentScheduleId, 'adm');
+        showToast('🗑️ Atividade removida', 'info');
+
+    } catch (error) {
+        console.error('Erro ao remover atividade:', error);
+        showToast('❌ Erro ao remover atividade', 'error');
+    }
+}
+
+function closeActivityModal() {
+    document.getElementById('activity-modal').classList.add('hidden');
+    document.getElementById('activity-nome').value = '';
+    document.getElementById('activity-materia').value = '';
+    document.getElementById('activity-descricao').value = '';
+    selectedCell = null;
+    modalSelectedColor = 'activity-color-1';
+    document.querySelectorAll('#modal-color-picker .color-option').forEach(el => {
+        el.classList.toggle('selected', el.className.includes('activity-color-1'));
+    });
+}
+
+// ============ FUNÇÕES DO ALUNO ============
+
+async function alunoLoadSchedules() {
+    try {
+        const response = await fetch(`${API_URL}/schedules/aluno/${currentUser.id}`);
+        const schedules = await response.json();
+
+        const container = document.getElementById('aluno-schedules-list');
+        
+        if (schedules.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum horário disponível</p>';
+            return;
+        }
+
+        container.innerHTML = schedules.map(s => `
+            <div class="schedule-item ${s.id === currentScheduleId ? 'active' : ''}" 
+                 onclick="alunoSelectSchedule('${s.id}')">
+                <span class="schedule-name">📋 ${s.nome}</span>
+                <span class="schedule-date">${s.created_at || ''}</span>
+                <span class="schedule-badge">${Object.keys(s.dias || {}).length} dias</span>
+            </div>
+        `).join('');
+
+        if (schedules.length > 0 && !currentScheduleId) {
+            alunoSelectSchedule(schedules[0].id);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar horários:', error);
+    }
+}
+
+async function alunoSelectSchedule(scheduleId) {
+    currentScheduleId = scheduleId;
+    await alunoLoadSchedules();
+    await renderScheduleGrid(scheduleId, 'aluno');
+}
+
+// ============================================================
 // FUNÇÕES DE DÚVIDAS
 // ============================================================
 
@@ -1592,6 +2375,8 @@ async function renderAll() {
         await admRenderActivityLog();
         await updateAdmAlunosList();
         await updateAdmSelects();
+        await updateAdmScheduleSelect();
+        await admLoadSchedules();
     } else {
         await renderWeekOverview();
         if (selectedDay) {
@@ -1601,6 +2386,7 @@ async function renderAll() {
         await loadAlunoData();
         updateAlunoXP();
         await checkAchievements();
+        await alunoLoadSchedules();
     }
 }
 
