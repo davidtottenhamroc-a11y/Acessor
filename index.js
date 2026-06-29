@@ -99,7 +99,7 @@ app.post('/api/login', async (req, res) => {
     const user = record.get('u').properties;
     const alunos = record.get('alunos').map(a => a.properties);
 
-    if (user.role === 'adm') {
+    if (user.role === 'adm' || user.role === 'assessor') {
       user.alunosVinculados = alunos.map(a => a.id);
     }
 
@@ -110,11 +110,21 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Cadastrar aluno
+// Cadastrar aluno (apenas adm pode criar)
 app.post('/api/users/aluno', async (req, res) => {
   const { name, password, admId } = req.body;
 
   try {
+    // Verificar se o criador é um admin
+    const adminCheck = await runQuery(
+      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
+      { admId }
+    );
+
+    if (adminCheck.records.length === 0) {
+      return res.status(403).json({ error: 'Apenas administradores podem cadastrar alunos' });
+    }
+
     const alunoId = 'aluno_' + Date.now();
     
     const result = await runQuery(
@@ -143,12 +153,105 @@ app.post('/api/users/aluno', async (req, res) => {
   }
 });
 
+// Cadastrar assessor (apenas adm pode criar)
+app.post('/api/users/assessor', async (req, res) => {
+  const { name, password, admId } = req.body;
+
+  try {
+    // Verificar se o criador é um admin
+    const adminCheck = await runQuery(
+      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
+      { admId }
+    );
+
+    if (adminCheck.records.length === 0) {
+      return res.status(403).json({ error: 'Apenas administradores podem cadastrar assessores' });
+    }
+
+    const assessorId = 'assessor_' + Date.now();
+    
+    const result = await runQuery(
+      `
+      MATCH (adm:User {id: $admId})
+      CREATE (assessor:User {
+        id: $assessorId,
+        name: $name,
+        password: $password,
+        role: 'assessor'
+      })
+      CREATE (adm)-[:VINCULA_ASSESSOR]->(assessor)
+      RETURN assessor
+      `,
+      { admId, assessorId, name, password }
+    );
+
+    const assessor = result.records[0].get('assessor').properties;
+    res.json(assessor);
+  } catch (error) {
+    console.error('Erro ao cadastrar assessor:', error);
+    res.status(500).json({ error: 'Erro ao cadastrar assessor: ' + error.message });
+  }
+});
+
+// Vincular aluno a um assessor
+app.post('/api/users/vincular', async (req, res) => {
+  const { alunoId, assessorId } = req.body;
+
+  try {
+    // Verificar se o assessor existe
+    const assessorCheck = await runQuery(
+      'MATCH (u:User {id: $assessorId, role: "assessor"}) RETURN u',
+      { assessorId }
+    );
+
+    if (assessorCheck.records.length === 0) {
+      return res.status(404).json({ error: 'Assessor não encontrado' });
+    }
+
+    // Verificar se o aluno existe
+    const alunoCheck = await runQuery(
+      'MATCH (u:User {id: $alunoId, role: "aluno"}) RETURN u',
+      { alunoId }
+    );
+
+    if (alunoCheck.records.length === 0) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
+
+    // Criar vínculo
+    await runQuery(
+      `
+      MATCH (assessor:User {id: $assessorId})
+      MATCH (aluno:User {id: $alunoId})
+      CREATE (assessor)-[:VINCULA]->(aluno)
+      RETURN assessor, aluno
+      `,
+      { assessorId, alunoId }
+    );
+
+    res.json({ success: true, message: 'Aluno vinculado ao assessor com sucesso' });
+  } catch (error) {
+    console.error('Erro ao vincular aluno:', error);
+    res.status(500).json({ error: 'Erro ao vincular aluno: ' + error.message });
+  }
+});
+
 // Remover aluno
 app.delete('/api/users/aluno/:alunoId', async (req, res) => {
   const { alunoId } = req.params;
   const { admId } = req.body;
 
   try {
+    // Verificar se o adm tem permissão
+    const adminCheck = await runQuery(
+      'MATCH (u:User {id: $admId, role: "adm"}) RETURN u',
+      { admId }
+    );
+
+    if (adminCheck.records.length === 0) {
+      return res.status(403).json({ error: 'Apenas administradores podem remover alunos' });
+    }
+
     await runQuery(
       `
       MATCH (adm:User {id: $admId})-[r:VINCULA]->(aluno:User {id: $alunoId})
@@ -158,6 +261,8 @@ app.delete('/api/users/aluno/:alunoId', async (req, res) => {
       OPTIONAL MATCH (aluno)-[:TEM_DUVIDA]->(q:Question)
       OPTIONAL MATCH (aluno)-[:TEM_LOG]->(l:Log)
       OPTIONAL MATCH (aluno)-[:TEM_HORARIO]->(s:Schedule)
+      OPTIONAL MATCH (assessor:User)-[:VINCULA]->(aluno)
+      DELETE r2
       DETACH DELETE aluno, t, q, l, s
       `,
       { admId, alunoId }
@@ -170,18 +275,18 @@ app.delete('/api/users/aluno/:alunoId', async (req, res) => {
   }
 });
 
-// Buscar alunos vinculados
-app.get('/api/users/alunos/:admId', async (req, res) => {
-  const { admId } = req.params;
+// Buscar alunos vinculados a um usuário (adm ou assessor)
+app.get('/api/users/alunos/:userId', async (req, res) => {
+  const { userId } = req.params;
 
   try {
     const result = await runQuery(
       `
-      MATCH (adm:User {id: $admId})-[:VINCULA]->(aluno:User)
+      MATCH (user:User {id: $userId})-[:VINCULA]->(aluno:User)
       RETURN aluno
       ORDER BY aluno.name
       `,
-      { admId }
+      { userId }
     );
 
     const alunos = result.records.map(r => r.get('aluno').properties);
@@ -192,28 +297,50 @@ app.get('/api/users/alunos/:admId', async (req, res) => {
   }
 });
 
-// Buscar dados do aluno
-app.get('/api/users/aluno/:alunoId', async (req, res) => {
-  const { alunoId } = req.params;
+// Buscar assessores vinculados a um adm
+app.get('/api/users/assessores/:admId', async (req, res) => {
+  const { admId } = req.params;
 
   try {
     const result = await runQuery(
       `
-      MATCH (u:User {id: $alunoId})
+      MATCH (adm:User {id: $admId})-[:VINCULA_ASSESSOR]->(assessor:User)
+      RETURN assessor
+      ORDER BY assessor.name
+      `,
+      { admId }
+    );
+
+    const assessores = result.records.map(r => r.get('assessor').properties);
+    res.json(assessores);
+  } catch (error) {
+    console.error('Erro ao buscar assessores:', error);
+    res.status(500).json({ error: 'Erro ao buscar assessores: ' + error.message });
+  }
+});
+
+// Buscar dados do usuário
+app.get('/api/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const result = await runQuery(
+      `
+      MATCH (u:User {id: $userId})
       RETURN u
       `,
-      { alunoId }
+      { userId }
     );
 
     if (result.records.length === 0) {
-      return res.status(404).json({ error: 'Aluno não encontrado' });
+      return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    const aluno = result.records[0].get('u').properties;
-    res.json(aluno);
+    const user = result.records[0].get('u').properties;
+    res.json(user);
   } catch (error) {
-    console.error('Erro ao buscar aluno:', error);
-    res.status(500).json({ error: 'Erro ao buscar aluno: ' + error.message });
+    console.error('Erro ao buscar usuário:', error);
+    res.status(500).json({ error: 'Erro ao buscar usuário: ' + error.message });
   }
 });
 
@@ -323,42 +450,55 @@ app.get('/api/tasks/aluno/:alunoId', async (req, res) => {
   }
 });
 
-// Buscar tarefas por data
-app.get('/api/tasks/aluno/:alunoId/data/:data', async (req, res) => {
-  const { alunoId, data } = req.params;
+// Buscar tarefas por período
+app.get('/api/tasks/aluno/:alunoId/periodo', async (req, res) => {
+  const { alunoId } = req.params;
+  const { dataInicio, dataFim } = req.query;
 
   try {
-    const result = await runQuery(
-      `
+    let query = `
       MATCH (aluno:User {id: $alunoId})-[:TEM_TAREFA]->(t:Task)
-      WHERE t.data = $data
+      WHERE t.data >= $dataInicio AND t.data <= $dataFim
       RETURN t
-      ORDER BY t.timeStart
-      `,
-      { alunoId, data }
-    );
+      ORDER BY t.data, t.timeStart
+    `;
+    
+    const result = await runQuery(query, { alunoId, dataInicio, dataFim });
 
     const tasks = result.records.map(r => r.get('t').properties);
     res.json(tasks);
   } catch (error) {
-    console.error('Erro ao buscar tarefas por data:', error);
-    res.status(500).json({ error: 'Erro ao buscar tarefas por data: ' + error.message });
+    console.error('Erro ao buscar tarefas por período:', error);
+    res.status(500).json({ error: 'Erro ao buscar tarefas por período: ' + error.message });
   }
 });
 
-// Buscar tarefas de todos os alunos de um admin
-app.get('/api/tasks/admin/:admId', async (req, res) => {
-  const { admId } = req.params;
+// Buscar tarefas de todos os alunos de um usuário (adm ou assessor)
+app.get('/api/tasks/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { dataInicio, dataFim, alunoId } = req.query;
 
   try {
-    const result = await runQuery(
-      `
-      MATCH (adm:User {id: $admId})-[:VINCULA]->(aluno:User)-[:TEM_TAREFA]->(t:Task)
-      RETURN aluno, t
-      ORDER BY t.data, t.timeStart
-      `,
-      { admId }
-    );
+    let query = `
+      MATCH (user:User {id: $userId})-[:VINCULA]->(aluno:User)-[:TEM_TAREFA]->(t:Task)
+    `;
+    let params = { userId };
+    
+    if (alunoId && alunoId !== 'all') {
+      query += ` WHERE aluno.id = $alunoId`;
+      params.alunoId = alunoId;
+    }
+    
+    if (dataInicio && dataFim) {
+      query += alunoId && alunoId !== 'all' ? ` AND` : ` WHERE`;
+      query += ` t.data >= $dataInicio AND t.data <= $dataFim`;
+      params.dataInicio = dataInicio;
+      params.dataFim = dataFim;
+    }
+    
+    query += ` RETURN aluno, t ORDER BY t.data, t.timeStart`;
+    
+    const result = await runQuery(query, params);
 
     const tasks = result.records.map(r => ({
       ...r.get('t').properties,
@@ -549,7 +689,8 @@ app.post('/api/questions', async (req, res) => {
         id: $questionId,
         text: $text,
         answer: '',
-        status: 'Nova'
+        status: 'Nova',
+        created_at: datetime()
       })
       CREATE (aluno)-[:TEM_DUVIDA]->(q)
       RETURN q
@@ -598,19 +739,25 @@ app.get('/api/questions/aluno/:alunoId', async (req, res) => {
   }
 });
 
-// Buscar dúvidas de alunos vinculados a um admin
-app.get('/api/questions/admin/:admId', async (req, res) => {
-  const { admId } = req.params;
+// Buscar dúvidas de alunos vinculados a um usuário (adm ou assessor)
+app.get('/api/questions/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { status } = req.query;
 
   try {
-    const result = await runQuery(
-      `
-      MATCH (adm:User {id: $admId})-[:VINCULA]->(aluno:User)-[:TEM_DUVIDA]->(q:Question)
-      RETURN aluno, q
-      ORDER BY q.id DESC
-      `,
-      { admId }
-    );
+    let query = `
+      MATCH (user:User {id: $userId})-[:VINCULA]->(aluno:User)-[:TEM_DUVIDA]->(q:Question)
+    `;
+    let params = { userId };
+    
+    if (status && status !== 'all') {
+      query += ` WHERE q.status = $status`;
+      params.status = status;
+    }
+    
+    query += ` RETURN aluno, q ORDER BY q.id DESC`;
+    
+    const result = await runQuery(query, params);
 
     const questions = result.records.map(r => ({
       ...r.get('q').properties,
@@ -634,7 +781,8 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
       `
       MATCH (q:Question {id: $questionId})
       SET q.answer = $answer,
-          q.status = 'Respondida'
+          q.status = 'Respondida',
+          q.respondida_em = datetime()
       RETURN q
       `,
       { questionId: parseInt(questionId) || questionId, answer }
@@ -649,20 +797,32 @@ app.put('/api/questions/:questionId/answer', async (req, res) => {
 
 // ============ LOGS ============
 
-// Buscar logs de um admin
-app.get('/api/logs/admin/:admId', async (req, res) => {
-  const { admId } = req.params;
+// Buscar logs de um usuário (adm ou assessor)
+app.get('/api/logs/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { alunoId, dataInicio, dataFim } = req.query;
 
   try {
-    const result = await runQuery(
-      `
-      MATCH (adm:User {id: $admId})-[:VINCULA]->(aluno:User)-[:TEM_LOG]->(l:Log)
-      RETURN l
-      ORDER BY l.id DESC
-      LIMIT 50
-      `,
-      { admId }
-    );
+    let query = `
+      MATCH (user:User {id: $userId})-[:VINCULA]->(aluno:User)-[:TEM_LOG]->(l:Log)
+    `;
+    let params = { userId };
+    
+    if (alunoId && alunoId !== 'all') {
+      query += ` WHERE l.alunoId = $alunoId`;
+      params.alunoId = alunoId;
+    }
+    
+    if (dataInicio && dataFim) {
+      query += alunoId && alunoId !== 'all' ? ` AND` : ` WHERE`;
+      query += ` l.timestamp >= $dataInicio AND l.timestamp <= $dataFim`;
+      params.dataInicio = dataInicio;
+      params.dataFim = dataFim;
+    }
+    
+    query += ` RETURN l ORDER BY l.id DESC LIMIT 100`;
+    
+    const result = await runQuery(query, params);
 
     const logs = result.records.map(r => r.get('l').properties);
     res.json(logs);
@@ -739,7 +899,7 @@ app.post('/api/achievements/check', async (req, res) => {
 
 // ============ HORÁRIOS (SCHEDULES) ============
 
-// Criar um quadro de horários para um aluno e gerar tarefas automaticamente
+// Criar um quadro de horários para um aluno
 app.post('/api/schedules', async (req, res) => {
   const { alunoId, nome, dataInicio, dataFim, diasSemana, atividades } = req.body;
 
@@ -749,7 +909,6 @@ app.post('/api/schedules', async (req, res) => {
   console.log('  - dataInicio:', dataInicio);
   console.log('  - dataFim:', dataFim);
   console.log('  - diasSemana:', diasSemana);
-  console.log('  - atividades:', JSON.stringify(atividades, null, 2));
 
   try {
     const scheduleId = 'schedule_' + Date.now();
@@ -806,7 +965,6 @@ app.post('/api/schedules', async (req, res) => {
 
     // ====== CRIAR TAREFAS AUTOMATICAMENTE ======
     const tarefasCriadas = [];
-    const tarefasErro = [];
 
     if (dataInicio && dataFim && atividades) {
       console.log('🔄 Gerando tarefas para o período...');
@@ -834,6 +992,9 @@ app.post('/api/schedules', async (req, res) => {
         6: 'sabado'
       };
 
+      const diasSelecionados = schedule.diasSemana || [];
+      const todosDiasLiberados = diasSelecionados.length === 0;
+
       let totalTarefas = 0;
       const currentDate = new Date(startDate);
       
@@ -842,93 +1003,89 @@ app.post('/api/schedules', async (req, res) => {
         const dateStr = currentDate.toISOString().split('T')[0];
         const diaSemanaNome = dayNames[dayOfWeek];
         
-        // Verificar se este dia da semana está selecionado
-        if (diasSemana && diasSemana.includes(diaSemanaNome)) {
+        const diaLiberado = todosDiasLiberados || diasSelecionados.includes(diaSemanaNome);
+        
+        if (diaLiberado && atividades[diaSemanaNome]) {
           console.log(`  📅 Gerando tarefas para ${dateStr} (${diaSemanaNome})`);
           
-          if (atividades[diaSemanaNome]) {
-            for (const [hora, atividade] of Object.entries(atividades[diaSemanaNome])) {
-              if (!atividade || !atividade.nome) continue;
+          for (const [hora, atividade] of Object.entries(atividades[diaSemanaNome])) {
+            if (!atividade || !atividade.nome) continue;
+            
+            try {
+              const horaParts = hora.split(':');
+              const horaInicio = parseInt(horaParts[0]);
+              const horaFim = horaInicio + 1;
+              const timeEnd = `${String(horaFim).padStart(2, '0')}:${horaParts[1] || '00'}`;
               
-              try {
-                const horaParts = hora.split(':');
-                const horaInicio = parseInt(horaParts[0]);
-                const horaFim = horaInicio + 1;
-                const timeEnd = `${String(horaFim).padStart(2, '0')}:${horaParts[1] || '00'}`;
-                
-                const taskId = Date.now() + Math.random() * 1000;
-                const taskName = atividade.materia ? `${atividade.nome} - ${atividade.materia}` : atividade.nome;
-                
-                console.log(`    ✅ Criando tarefa: ${taskName} (${dateStr} ${hora}-${timeEnd})`);
-                
-                const taskResult = await runQuery(
-                  `
-                  MATCH (aluno:User {id: $alunoId})
-                  CREATE (t:Task {
-                    id: $taskId,
-                    data: $data,
-                    diaSemana: $diaSemana,
-                    timeStart: $timeStart,
-                    timeEnd: $timeEnd,
-                    name: $name,
-                    status: 'Pendente',
-                    justification: '',
-                    scheduleId: $scheduleId,
-                    descricao: $descricao,
-                    cor: $cor
-                  })
-                  CREATE (aluno)-[:TEM_TAREFA]->(t)
-                  RETURN t
-                  `,
-                  {
-                    alunoId,
-                    taskId,
-                    data: dateStr,
-                    diaSemana: diaSemanaNome,
-                    timeStart: hora,
-                    timeEnd: timeEnd,
-                    name: taskName,
-                    scheduleId: scheduleId,
-                    descricao: atividade.descricao || '',
-                    cor: atividade.cor || 'activity-color-1'
-                  }
-                );
-                
-                const task = taskResult.records[0].get('t').properties;
-                tarefasCriadas.push(task);
-                totalTarefas++;
-                
-                // Criar log
-                await runQuery(
-                  `
-                  MATCH (aluno:User {id: $alunoId})
-                  CREATE (l:Log {
-                    id: $logId,
-                    timestamp: $timestamp,
-                    alunoId: $alunoId,
-                    taskId: $taskId,
-                    oldStatus: '-',
-                    newStatus: 'Pendente',
-                    justification: 'Tarefa criada automaticamente pelo horário: ${nome}',
-                    alunoName: $alunoName,
-                    taskName: $taskName
-                  })
-                  CREATE (aluno)-[:TEM_LOG]->(l)
-                  `,
-                  {
-                    alunoId,
-                    taskId,
-                    logId: String(Date.now() + Math.random() * 1000),
-                    timestamp,
-                    alunoName,
-                    taskName
-                  }
-                );
-                
-              } catch (error) {
-                console.error(`    ❌ Erro ao criar tarefa para ${dateStr} ${hora}:`, error.message);
-                tarefasErro.push({ data: dateStr, hora, erro: error.message });
-              }
+              const taskId = Date.now() + Math.random() * 1000;
+              const taskName = atividade.materia ? `${atividade.nome} - ${atividade.materia}` : atividade.nome;
+              
+              const taskResult = await runQuery(
+                `
+                MATCH (aluno:User {id: $alunoId})
+                CREATE (t:Task {
+                  id: $taskId,
+                  data: $data,
+                  diaSemana: $diaSemana,
+                  timeStart: $timeStart,
+                  timeEnd: $timeEnd,
+                  name: $name,
+                  status: 'Pendente',
+                  justification: '',
+                  scheduleId: $scheduleId,
+                  descricao: $descricao,
+                  cor: $cor
+                })
+                CREATE (aluno)-[:TEM_TAREFA]->(t)
+                RETURN t
+                `,
+                {
+                  alunoId,
+                  taskId,
+                  data: dateStr,
+                  diaSemana: diaSemanaNome,
+                  timeStart: hora,
+                  timeEnd: timeEnd,
+                  name: taskName,
+                  scheduleId: scheduleId,
+                  descricao: atividade.descricao || '',
+                  cor: atividade.cor || 'activity-color-1'
+                }
+              );
+              
+              const task = taskResult.records[0].get('t').properties;
+              tarefasCriadas.push(task);
+              totalTarefas++;
+              
+              // Criar log
+              await runQuery(
+                `
+                MATCH (aluno:User {id: $alunoId})
+                CREATE (l:Log {
+                  id: $logId,
+                  timestamp: $timestamp,
+                  alunoId: $alunoId,
+                  taskId: $taskId,
+                  oldStatus: '-',
+                  newStatus: 'Pendente',
+                  justification: 'Tarefa criada automaticamente pelo horário: ${nome}',
+                  alunoName: $alunoName,
+                  taskName: $taskName
+                })
+                CREATE (aluno)-[:TEM_LOG]->(l)
+                `,
+                {
+                  alunoId,
+                  taskId,
+                  logId: String(Date.now() + Math.random() * 1000),
+                  timestamp,
+                  alunoName,
+                  taskName
+                }
+              );
+              
+            } catch (error) {
+              console.error(`    ❌ Erro ao criar tarefa para ${dateStr} ${hora}:`, error.message);
             }
           }
         }
@@ -943,7 +1100,6 @@ app.post('/api/schedules', async (req, res) => {
       schedule: schedule,
       tarefasCriadas: tarefasCriadas,
       totalTarefas: tarefasCriadas.length,
-      tarefasErro: tarefasErro,
       message: `Horário criado com ${tarefasCriadas.length} tarefas geradas automaticamente!`
     });
   } catch (error) {
@@ -976,43 +1132,6 @@ app.get('/api/schedules/aluno/:alunoId', async (req, res) => {
         s.atividades = {};
       }
       return s;
-    });
-
-    res.json(schedules);
-  } catch (error) {
-    console.error('Erro ao buscar horários:', error);
-    res.status(500).json({ error: 'Erro ao buscar horários: ' + error.message });
-  }
-});
-
-// Buscar horários de todos os alunos de um admin
-app.get('/api/schedules/admin/:admId', async (req, res) => {
-  const { admId } = req.params;
-
-  try {
-    const result = await runQuery(
-      `
-      MATCH (adm:User {id: $admId})-[:VINCULA]->(aluno:User)-[:TEM_HORARIO]->(s:Schedule)
-      RETURN aluno, s
-      ORDER BY s.created_at DESC
-      `,
-      { admId }
-    );
-
-    const schedules = result.records.map(r => {
-      const s = r.get('s').properties;
-      try {
-        s.diasSemana = JSON.parse(s.diasSemana);
-        s.atividades = JSON.parse(s.atividades);
-      } catch (e) {
-        s.diasSemana = [];
-        s.atividades = {};
-      }
-      return {
-        ...s,
-        alunoName: r.get('aluno').properties.name,
-        alunoId: r.get('aluno').properties.id
-      };
     });
 
     res.json(schedules);
@@ -1094,6 +1213,112 @@ app.delete('/api/schedules/:scheduleId', async (req, res) => {
   }
 });
 
+// ============ RELATÓRIOS ============
+
+// Gerar relatório de atividades do aluno
+app.get('/api/reports/aluno/:alunoId', async (req, res) => {
+  const { alunoId } = req.params;
+  const { dataInicio, dataFim } = req.query;
+
+  try {
+    // Buscar dados do aluno
+    const alunoResult = await runQuery(
+      'MATCH (u:User {id: $alunoId}) RETURN u',
+      { alunoId }
+    );
+
+    if (alunoResult.records.length === 0) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
+
+    const aluno = alunoResult.records[0].get('u').properties;
+
+    // Buscar tarefas do aluno no período
+    let tasksQuery = `
+      MATCH (aluno:User {id: $alunoId})-[:TEM_TAREFA]->(t:Task)
+    `;
+    let params = { alunoId };
+    
+    if (dataInicio && dataFim) {
+      tasksQuery += ` WHERE t.data >= $dataInicio AND t.data <= $dataFim`;
+      params.dataInicio = dataInicio;
+      params.dataFim = dataFim;
+    }
+    
+    tasksQuery += ` RETURN t ORDER BY t.data, t.timeStart`;
+    
+    const tasksResult = await runQuery(tasksQuery, params);
+    const tasks = tasksResult.records.map(r => r.get('t').properties);
+
+    // Buscar dúvidas do aluno
+    const questionsResult = await runQuery(
+      `
+      MATCH (aluno:User {id: $alunoId})-[:TEM_DUVIDA]->(q:Question)
+      RETURN q
+      ORDER BY q.id DESC
+      `,
+      { alunoId }
+    );
+    const questions = questionsResult.records.map(r => r.get('q').properties);
+
+    // Buscar logs do aluno
+    const logsResult = await runQuery(
+      `
+      MATCH (aluno:User {id: $alunoId})-[:TEM_LOG]->(l:Log)
+      RETURN l
+      ORDER BY l.id DESC
+      LIMIT 50
+      `,
+      { alunoId }
+    );
+    const logs = logsResult.records.map(r => r.get('l').properties);
+
+    // Calcular estatísticas
+    const totalTasks = tasks.length;
+    const tasksDone = tasks.filter(t => t.status === 'Realizado').length;
+    const tasksPending = tasks.filter(t => t.status === 'Pendente').length;
+    const tasksNotDone = tasks.filter(t => t.status === 'Não Feito').length;
+    const tasksDoing = tasks.filter(t => t.status === 'Em Andamento').length;
+    
+    const totalQuestions = questions.length;
+    const questionsAnswered = questions.filter(q => q.status === 'Respondida').length;
+    const questionsPending = questions.filter(q => q.status === 'Nova').length;
+
+    const report = {
+      aluno: {
+        id: aluno.id,
+        name: aluno.name,
+        xp: aluno.xp || 0,
+        level: aluno.level || 1,
+        achievements: aluno.achievements || []
+      },
+      periodo: {
+        dataInicio: dataInicio || 'Todas',
+        dataFim: dataFim || 'Todas'
+      },
+      estatisticas: {
+        totalTarefas: totalTasks,
+        tarefasRealizadas: tasksDone,
+        tarefasPendentes: tasksPending,
+        tarefasNaoFeitas: tasksNotDone,
+        tarefasEmAndamento: tasksDoing,
+        taxaConclusao: totalTasks > 0 ? Math.round((tasksDone / totalTasks) * 100) : 0,
+        totalDuvidas: totalQuestions,
+        duvidasRespondidas: questionsAnswered,
+        duvidasPendentes: questionsPending
+      },
+      tarefas: tasks,
+      duvidas: questions,
+      logs: logs
+    };
+
+    res.json(report);
+  } catch (error) {
+    console.error('Erro ao gerar relatório:', error);
+    res.status(500).json({ error: 'Erro ao gerar relatório: ' + error.message });
+  }
+});
+
 // ============ INICIALIZAÇÃO DO BANCO ============
 
 let dbInitialized = false;
@@ -1111,6 +1336,7 @@ async function initDatabase() {
     
     const session = driver.session();
     try {
+      // Criar constraints
       await session.run(`
         CREATE CONSTRAINT user_id_unique IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE
       `);
@@ -1127,6 +1353,7 @@ async function initDatabase() {
         CREATE CONSTRAINT schedule_id_unique IF NOT EXISTS FOR (s:Schedule) REQUIRE s.id IS UNIQUE
       `);
 
+      // Verificar se há usuários
       const result = await session.run('MATCH (u:User) RETURN COUNT(u) AS count');
       const count = result.records[0].get('count').toInt();
       
