@@ -313,7 +313,7 @@
             border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
             box-shadow: var(--shadow);
             max-height: 90vh;
@@ -364,7 +364,7 @@
             padding: 10px;
             margin-top: 8px;
             font-size: 12px;
-            max-height: 120px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .history-log .log-entry {
@@ -710,6 +710,26 @@
         .task-time { color: var(--accent-blue); font-weight: 700; }
         .task-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
+        /* Question item */
+        .question-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .question-item.new-question {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+        }
+        .answer-box {
+            background: rgba(124,77,255,0.1);
+            border-left: 4px solid var(--accent-purple);
+            padding: 10px 15px;
+            margin-top: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
         /* Login */
         .login-container {
             max-width: 450px;
@@ -750,6 +770,30 @@
         }
         .role-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
 
+        /* Relatório */
+        .report-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-card .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+        .stat-card .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
         @media (max-width: 768px) {
             .grid-2 { grid-template-columns: 1fr; }
             .app-header { flex-direction: column; text-align: center; }
@@ -763,10 +807,12 @@
             .schedule-controls select,
             .schedule-controls input { min-width: 100%; }
             .calendar-controls { flex-direction: column; }
+            .report-stats { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 480px) {
             .btn { padding: 8px 14px; font-size: 12px; }
             .schedule-table { min-width: 600px; font-size: 9px; }
+            .report-stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -783,6 +829,9 @@
             <p style="margin-bottom:10px;font-weight:700;">Selecione seu perfil:</p>
             <div class="role-selector">
                 <button class="role-btn" onclick="selectRole('adm')" id="role-adm-btn">
+                    <span class="emoji">👑</span> Administrador
+                </button>
+                <button class="role-btn" onclick="selectRole('assessor')" id="role-assessor-btn">
                     <span class="emoji">👨‍🏫</span> Assessor
                 </button>
                 <button class="role-btn" onclick="selectRole('aluno')" id="role-aluno-btn">
@@ -797,7 +846,7 @@
             </button>
             
             <p style="margin-top:15px;font-size:12px;color:var(--text-secondary);">
-                💡 Demo: David (senha: david0724) ou Malu (senha: Malu123)
+                💡 Demo: David (admin/david0724) ou Malu (aluno/Malu123)
             </p>
         </div>
     </div>
@@ -813,11 +862,12 @@
                 <span id="notification-area"></span>
                 <div class="user-avatar" id="user-avatar-display">?</div>
                 <span class="user-name" id="user-name-display"></span>
+                <span class="user-role" id="user-role-display" style="font-size:12px;color:var(--text-secondary);"></span>
                 <button class="btn-logout" onclick="logout()">🚪 Sair</button>
             </div>
         </header>
 
-        <!-- VIEW ADM -->
+        <!-- VIEW ADMIN -->
         <div id="adm-view" class="hidden fade-in-up">
             <div class="grid-2">
                 <div class="card">
@@ -830,28 +880,61 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-title">📋 Meus Alunos Vinculados</div>
+                    <div class="card-title">👨‍🏫 Cadastrar Assessor</div>
+                    <input type="text" id="new-assessor-name" class="mb-1" placeholder="Nome do assessor">
+                    <input type="password" id="new-assessor-password" class="mb-1" placeholder="Senha do assessor">
+                    <button class="btn btn-primary" onclick="admCadastrarAssessor()" style="width:100%;justify-content:center;">
+                        ➕ Cadastrar Assessor
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">📋 Meus Alunos</div>
                     <div id="adm-alunos-list">
+                        <p style="color:var(--text-secondary);">Carregando...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">👨‍🏫 Meus Assessores</div>
+                    <div id="adm-assessores-list">
                         <p style="color:var(--text-secondary);">Carregando...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- SEÇÃO DE HORÁRIOS COM CALENDÁRIO E GRADE SEMANAL -->
+            <!-- Vincular Aluno a Assessor -->
+            <div class="card">
+                <div class="card-title">🔗 Vincular Aluno a Assessor</div>
+                <div class="grid-2">
+                    <select id="adm-vincular-aluno" class="mb-1">
+                        <option value="">Selecione o aluno</option>
+                    </select>
+                    <select id="adm-vincular-assessor" class="mb-1">
+                        <option value="">Selecione o assessor</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="admVincularAluno()" style="width:100%;justify-content:center;">
+                    🔗 Vincular Aluno ao Assessor
+                </button>
+            </div>
+
+            <!-- Horários (acessível para adm e assessor) -->
             <div class="card mt-2">
-                <div class="card-title">📅 Criar Horário com Calendário</div>
+                <div class="card-title">📅 Gerenciar Horários</div>
                 
                 <div class="schedule-controls">
                     <select id="adm-schedule-aluno" class="mb-1" onchange="admLoadSchedules()">
                         <option value="">Selecione o aluno</option>
                     </select>
-                    <input type="text" id="adm-schedule-name" placeholder="Nome do horário (ex: Semana 1)" class="mb-1">
+                    <input type="text" id="adm-schedule-name" placeholder="Nome do horário" class="mb-1">
                     <button class="btn btn-primary" onclick="admCreateSchedule()">
                         ➕ Criar Horário
                     </button>
                 </div>
 
-                <!-- Controles do Calendário -->
                 <div class="calendar-controls">
                     <div class="form-group">
                         <label>📅 Data Início</label>
@@ -890,21 +973,54 @@
                 </div>
             </div>
 
-            <!-- LISTA DE TAREFAS - COM FILTRO POR ALUNO -->
+            <!-- Dúvidas dos alunos -->
+            <div class="card mt-2">
+                <div class="card-title">
+                    💬 Dúvidas dos Alunos
+                    <span id="adm-questions-badge" class="notification-badge hidden">0</span>
+                </div>
+                <div class="schedule-controls">
+                    <select id="adm-questions-aluno" onchange="admRenderQuestions()" class="mb-1">
+                        <option value="all">Todos os alunos</option>
+                    </select>
+                    <select id="adm-questions-status" onchange="admRenderQuestions()" class="mb-1">
+                        <option value="all">Todos os status</option>
+                        <option value="Nova">🆕 Novas</option>
+                        <option value="Respondida">✅ Respondidas</option>
+                    </select>
+                    <button class="btn btn-primary btn-small" onclick="admRenderQuestions()">🔍 Filtrar</button>
+                </div>
+                <div id="adm-questions-list">
+                    <p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>
+                </div>
+            </div>
+
+            <!-- Lista de Tarefas com Filtros -->
             <div class="card mt-2">
                 <div class="card-title">📌 Lista de Tarefas</div>
                 <div class="schedule-controls">
                     <select id="adm-filter-aluno" onchange="admRenderTasks()" class="mb-1">
                         <option value="all">Todos os alunos</option>
                     </select>
-                    <input type="date" id="adm-filter-data" onchange="admRenderTasks()" class="mb-1">
-                    <button class="btn btn-small btn-primary" onclick="admRenderTasks()">🔍 Filtrar</button>
+                    <input type="date" id="adm-filter-data-inicio" onchange="admRenderTasks()" class="mb-1" placeholder="Data início">
+                    <input type="date" id="adm-filter-data-fim" onchange="admRenderTasks()" class="mb-1" placeholder="Data fim">
+                    <button class="btn btn-primary btn-small" onclick="admRenderTasks()">🔍 Filtrar</button>
+                    <button class="btn btn-success btn-small" onclick="admGerarRelatorio()">📊 Relatório</button>
                 </div>
                 <div id="adm-tasks-list"></div>
             </div>
 
+            <!-- Registro de Atividades -->
             <div class="card mt-2">
-                <div class="card-title">📋 Registro de Atividades dos Alunos</div>
+                <div class="card-title">📋 Registro de Atividades</div>
+                <div class="schedule-controls">
+                    <select id="adm-log-aluno" onchange="admRenderLogs()" class="mb-1">
+                        <option value="all">Todos os alunos</option>
+                    </select>
+                    <input type="date" id="adm-log-data-inicio" onchange="admRenderLogs()" class="mb-1" placeholder="Data início">
+                    <input type="date" id="adm-log-data-fim" onchange="admRenderLogs()" class="mb-1" placeholder="Data fim">
+                    <button class="btn btn-primary btn-small" onclick="admRenderLogs()">🔍 Filtrar</button>
+                </div>
                 <div id="adm-activity-log">
                     <p style="color:var(--text-secondary);">Nenhuma atividade registrada</p>
                 </div>
@@ -933,7 +1049,7 @@
                         <div class="achievement-icon">💡</div>
                         <small>3 Dúvidas</small>
                     </div>
-                    <div class="achievement locked" id="ach-3" title="Voltar de Não Feito para Feito">
+                    <div class="achievement locked" id="ach-3" title="Recuperar tarefa não feita">
                         <div class="achievement-icon">🔄</div>
                         <small>Recuperação</small>
                     </div>
@@ -1005,7 +1121,7 @@
             <span id="activity-dia"></span> às <span id="activity-hora"></span>
         </p>
         
-        <input type="text" id="activity-nome" class="mb-1" placeholder="Nome da atividade (ex: Matemática)">
+        <input type="text" id="activity-nome" class="mb-1" placeholder="Nome da atividade">
         <input type="text" id="activity-materia" class="mb-1" placeholder="Matéria (opcional)">
         <textarea id="activity-descricao" class="mb-1" placeholder="Descrição (opcional)" rows="2"></textarea>
         
@@ -1032,6 +1148,19 @@
                 Cancelar
             </button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL RELATÓRIO -->
+<div id="report-modal" class="modal-overlay hidden">
+    <div class="modal fade-in-up" style="max-width:800px;">
+        <h3>📊 Relatório de Atividades</h3>
+        <div id="report-content">
+            <p style="color:var(--text-secondary);">Carregando relatório...</p>
+        </div>
+        <button class="btn btn-primary mt-2" onclick="closeReportModal()" style="width:100%;justify-content:center;">
+            Fechar
+        </button>
     </div>
 </div>
 
@@ -1074,6 +1203,7 @@ const HORARIOS_PADRAO = [
 function selectRole(role) {
     selectedRole = role;
     document.getElementById('role-adm-btn').classList.toggle('selected', role === 'adm');
+    document.getElementById('role-assessor-btn').classList.toggle('selected', role === 'assessor');
     document.getElementById('role-aluno-btn').classList.toggle('selected', role === 'aluno');
 }
 
@@ -1111,13 +1241,15 @@ async function doLogin() {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-panel').classList.remove('hidden');
         
-        document.getElementById('adm-view').classList.toggle('hidden', currentUser.role !== 'adm');
+        document.getElementById('adm-view').classList.toggle('hidden', currentUser.role !== 'adm' && currentUser.role !== 'assessor');
         document.getElementById('aluno-view').classList.toggle('hidden', currentUser.role !== 'aluno');
         
         document.getElementById('user-avatar-display').textContent = currentUser.name.charAt(0).toUpperCase();
         document.getElementById('user-name-display').textContent = currentUser.name;
+        document.getElementById('user-role-display').textContent = currentUser.role === 'adm' ? '👑 Administrador' : 
+                                                                  currentUser.role === 'assessor' ? '👨‍🏫 Assessor' : '🎒 Aluno';
         
-        if (currentUser.role === 'adm') {
+        if (currentUser.role === 'adm' || currentUser.role === 'assessor') {
             await setupAdmView();
         } else {
             await setupAlunoView();
@@ -1142,18 +1274,24 @@ function logout() {
     document.getElementById('login-name').value = '';
     document.getElementById('login-password').value = '';
     document.getElementById('role-adm-btn').classList.remove('selected');
+    document.getElementById('role-assessor-btn').classList.remove('selected');
     document.getElementById('role-aluno-btn').classList.remove('selected');
     showToast('👋 Até logo!', 'info');
 }
 
 // ============================================================
-// 👨‍🏫 FUNÇÕES DO ADM
+// 👨‍💼 FUNÇÕES DO ADMIN
 // ============================================================
+
 async function setupAdmView() {
     await updateAdmAlunosList();
+    await updateAdmAssessoresList();
     await updateAdmSelects();
     await updateAdmScheduleSelect();
     await admLoadSchedules();
+    await admRenderQuestions();
+    await admRenderTasks();
+    await admRenderLogs();
 }
 
 async function updateAdmAlunosList() {
@@ -1180,15 +1318,70 @@ async function updateAdmAlunosList() {
     }
 }
 
+async function updateAdmAssessoresList() {
+    const container = document.getElementById('adm-assessores-list');
+    
+    try {
+        const response = await fetch(`${API_URL}/users/assessores/${currentUser.id}`);
+        const assessores = await response.json();
+        
+        if (assessores.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhum assessor vinculado</p>';
+            return;
+        }
+        
+        container.innerHTML = assessores.map(a => `
+            <div class="aluno-list-item">
+                <span>👨‍🏫 <strong>${a.name}</strong></span>
+                <button class="btn btn-small btn-danger" onclick="admRemoverAssessor('${a.id}')">🗑️ Remover</button>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar assessores:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar assessores</p>';
+    }
+}
+
 async function updateAdmSelects() {
     try {
         const response = await fetch(`${API_URL}/users/alunos/${currentUser.id}`);
         const alunos = await response.json();
         
-        const selectAluno = document.getElementById('adm-select-aluno');
-        selectAluno.innerHTML = '<option value="">Selecione o aluno</option>';
+        // Select de alunos para vincular
+        const selectVincular = document.getElementById('adm-vincular-aluno');
+        selectVincular.innerHTML = '<option value="">Selecione o aluno</option>';
+        
+        // Select de alunos para filtros
+        const selectFilter = document.getElementById('adm-filter-aluno');
+        selectFilter.innerHTML = '<option value="all">Todos os alunos</option>';
+        
+        // Select de alunos para dúvidas
+        const selectQuestions = document.getElementById('adm-questions-aluno');
+        selectQuestions.innerHTML = '<option value="all">Todos os alunos</option>';
+        
+        // Select de alunos para logs
+        const selectLog = document.getElementById('adm-log-aluno');
+        selectLog.innerHTML = '<option value="all">Todos os alunos</option>';
+        
+        // Select de alunos para schedules
+        const selectSchedule = document.getElementById('adm-schedule-aluno');
+        selectSchedule.innerHTML = '<option value="">Selecione o aluno</option>';
+        
         alunos.forEach(a => {
-            selectAluno.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+            selectVincular.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+            selectFilter.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+            selectQuestions.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+            selectLog.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+            selectSchedule.innerHTML += `<option value="${a.id}">${a.name}</option>`;
+        });
+        
+        // Select de assessores para vincular
+        const assessoresResponse = await fetch(`${API_URL}/users/assessores/${currentUser.id}`);
+        const assessores = await assessoresResponse.json();
+        const selectAssessor = document.getElementById('adm-vincular-assessor');
+        selectAssessor.innerHTML = '<option value="">Selecione o assessor</option>';
+        assessores.forEach(a => {
+            selectAssessor.innerHTML += `<option value="${a.id}">${a.name}</option>`;
         });
     } catch (error) {
         console.error('Erro ao carregar selects:', error);
@@ -1248,6 +1441,43 @@ async function admCadastrarAluno() {
     }
 }
 
+async function admCadastrarAssessor() {
+    const name = document.getElementById('new-assessor-name').value.trim();
+    const password = document.getElementById('new-assessor-password').value.trim();
+    
+    if (!name || !password) {
+        showToast('⚠️ Preencha nome e senha do assessor!', 'warning');
+        return;
+    }
+    
+    try {
+        showToast('⏳ Cadastrando assessor...', 'info');
+        
+        const response = await fetch(`${API_URL}/users/assessor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password, admId: currentUser.id })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            showToast('❌ ' + error.error, 'error');
+            return;
+        }
+        
+        document.getElementById('new-assessor-name').value = '';
+        document.getElementById('new-assessor-password').value = '';
+        
+        await updateAdmAssessoresList();
+        await updateAdmSelects();
+        await renderAll();
+        showToast(`✅ Assessor "${name}" cadastrado com sucesso!`, 'success');
+    } catch (error) {
+        console.error('Erro ao cadastrar assessor:', error);
+        showToast('❌ Erro ao cadastrar assessor', 'error');
+    }
+}
+
 async function admRemoverAluno(alunoId) {
     if (!confirm('Tem certeza que deseja remover este aluno?')) return;
     
@@ -1266,6 +1496,59 @@ async function admRemoverAluno(alunoId) {
     } catch (error) {
         console.error('Erro ao remover aluno:', error);
         showToast('❌ Erro ao remover aluno', 'error');
+    }
+}
+
+async function admRemoverAssessor(assessorId) {
+    if (!confirm('Tem certeza que deseja remover este assessor?')) return;
+    
+    try {
+        // Buscar e remover vínculos do assessor
+        await fetch(`${API_URL}/users/assessor/${assessorId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admId: currentUser.id })
+        });
+        
+        await updateAdmAssessoresList();
+        await updateAdmSelects();
+        await renderAll();
+        showToast('🗑️ Assessor removido', 'info');
+    } catch (error) {
+        console.error('Erro ao remover assessor:', error);
+        showToast('❌ Erro ao remover assessor', 'error');
+    }
+}
+
+async function admVincularAluno() {
+    const alunoId = document.getElementById('adm-vincular-aluno').value;
+    const assessorId = document.getElementById('adm-vincular-assessor').value;
+    
+    if (!alunoId || !assessorId) {
+        showToast('⚠️ Selecione um aluno e um assessor!', 'warning');
+        return;
+    }
+    
+    try {
+        showToast('⏳ Vinculando...', 'info');
+        
+        const response = await fetch(`${API_URL}/users/vincular`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alunoId, assessorId })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            showToast('❌ ' + error.error, 'error');
+            return;
+        }
+        
+        await updateAdmSelects();
+        showToast('✅ Aluno vinculado ao assessor com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao vincular aluno:', error);
+        showToast('❌ Erro ao vincular aluno', 'error');
     }
 }
 
@@ -1368,11 +1651,8 @@ async function admCreateSchedule() {
         showToast('⚠️ Selecione o período (data início e fim)!', 'warning');
         return;
     }
-    if (selectedDays.length === 0) {
-        showToast('⚠️ Selecione pelo menos um dia da semana!', 'warning');
-        return;
-    }
 
+    const diasSelecionados = selectedDays.length > 0 ? selectedDays : ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
     const atividades = {};
 
     try {
@@ -1386,7 +1666,7 @@ async function admCreateSchedule() {
                 nome, 
                 dataInicio, 
                 dataFim, 
-                diasSemana: selectedDays,
+                diasSemana: diasSelecionados,
                 atividades: atividades
             })
         });
@@ -1414,7 +1694,7 @@ async function admCreateSchedule() {
         if (result.totalTarefas > 0) {
             showToast(`✅ Horário criado com ${result.totalTarefas} tarefas geradas!`, 'success');
         } else {
-            showToast('⚠️ Horário criado! Adicione atividades na grade para gerar tarefas.', 'warning');
+            showToast('⚠️ Horário criado! Adicione atividades na grade.', 'warning');
         }
     } catch (error) {
         console.error('❌ Erro ao criar horário:', error);
@@ -1459,7 +1739,7 @@ function selectModalColor(colorId) {
 }
 
 // ============================================================
-// 🎯 FUNÇÕES DA GRADE HORÁRIA - VISUAL COMPLETO (TODOS OS DIAS)
+// 🎯 FUNÇÕES DA GRADE HORÁRIA
 // ============================================================
 
 async function renderScheduleGrid(scheduleId, view = 'adm') {
@@ -1528,7 +1808,6 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
 
         // Buscar a data da semana atual para exibir
         const hoje = new Date();
-        const dataAtual = hoje.toISOString().split('T')[0];
         
         // Calcular as datas da semana (segunda a domingo)
         const diaSemanaAtual = hoje.getDay(); // 0=domingo
@@ -1545,6 +1824,11 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
 
         const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         const dayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const dayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
+        // Verificar quais dias estão selecionados
+        const diasSelecionados = schedule.diasSemana || [];
+        const todosDiasLiberados = diasSelecionados.length === 0;
 
         let html = `
             <div class="schedule-container">
@@ -1554,9 +1838,15 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                         <span style="font-size:11px;color:var(--text-secondary);">
                             Período: ${schedule.dataInicio || 'N/A'} → ${schedule.dataFim || 'N/A'}
                         </span>
-                        <span style="font-size:11px;color:var(--text-secondary);margin-left:10px;">
-                            📅 Semana de ${diasDaSemana[0]} a ${diasDaSemana[6]}
-                        </span>
+                        ${!todosDiasLiberados ? `
+                            <span style="font-size:10px;color:var(--accent-orange);margin-left:10px;">
+                                📆 Dias: ${diasSelecionados.join(', ')}
+                            </span>
+                        ` : `
+                            <span style="font-size:10px;color:var(--accent-green);margin-left:10px;">
+                                ✅ Todos os dias liberados
+                            </span>
+                        `}
                     </div>
                     ${isAdmin ? `
                         <button class="btn btn-small btn-success" onclick="openAddActivityModal()">
@@ -1575,6 +1865,11 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                                         ${dayShort[idx]}
                                         <br>
                                         <span style="font-size:8px;font-weight:normal;">${diasDaSemana[idx]}</span>
+                                        ${!todosDiasLiberados && !diasSelecionados.includes(dayKeys[idx]) ? `
+                                            <br><span style="font-size:8px;color:var(--accent-red);">🔒</span>
+                                        ` : `
+                                            <br><span style="font-size:8px;color:var(--accent-green);">✅</span>
+                                        `}
                                     </th>
                                 `).join('')}
                             </tr>
@@ -1586,7 +1881,7 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
             html += `<tr><td class="hour-cell">${hora}</td>`;
             
             dayNames.forEach((nome, idx) => {
-                const diaSemana = nome.toLowerCase();
+                const diaSemana = dayKeys[idx];
                 const key = `${diaSemana}_${hora}`;
                 const tarefasDia = tarefasMap[key] || [];
                 const hasTarefa = tarefasDia.length > 0;
@@ -1600,15 +1895,18 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                 const isInPeriodo = dataObj >= dataInicioObj && dataObj <= dataFimObj;
                 
                 // Verificar se o dia da semana está selecionado
-                const diaSemanaSelecionado = schedule.diasSemana && schedule.diasSemana.includes(diaSemana);
+                const diaLiberado = todosDiasLiberados || diasSelecionados.includes(diaSemana);
+                const podeEditar = isAdmin && isEditMode && isInPeriodo && diaLiberado;
                 
                 html += `
                     <td class="activity-cell ${hasTarefa ? 'has-activity ' + (tarefa.cor || '') : ''}" 
                         data-dia="${diaSemana}" 
                         data-hora="${hora}"
                         data-data="${data}"
-                        onclick="${isAdmin && isEditMode && isInPeriodo && diaSemanaSelecionado ? `handleCellClick('${diaSemana}', '${hora}', '${data}')` : ''}"
-                        style="${!isInPeriodo || !diaSemanaSelecionado ? 'opacity:0.3;cursor:not-allowed;' : (hasTarefa ? '' : 'cursor:default;')}">
+                        onclick="${podeEditar ? `handleCellClick('${diaSemana}', '${hora}', '${data}')` : ''}"
+                        style="${!isInPeriodo ? 'opacity:0.3;cursor:not-allowed;' : 
+                               !diaLiberado ? 'opacity:0.4;cursor:not-allowed;background:rgba(255,0,0,0.05);' : 
+                               (hasTarefa ? '' : 'cursor:default;')}">
                         ${hasTarefa ? `
                             <div class="activity-wrapper">
                                 <div class="activity-name">${tarefa.name}</div>
@@ -1629,9 +1927,9 @@ async function renderScheduleGrid(scheduleId, view = 'adm') {
                                     <button class="delete-activity" onclick="event.stopPropagation(); removeActivitySchedule('${diaSemana}', '${hora}', '${data}')">×</button>
                                 ` : ''}
                             </div>
-                        ` : (isAdmin && isEditMode && isInPeriodo && diaSemanaSelecionado ? `
+                        ` : (podeEditar ? `
                             <div class="empty-cell">Clique para adicionar</div>
-                        ` : (isInPeriodo && diaSemanaSelecionado ? '' : '🔒'))}
+                        ` : (!diaLiberado ? '🔒' : ''))}
                     </td>
                 `;
             });
@@ -1749,7 +2047,7 @@ async function addActivity() {
             })
         });
 
-        // ====== CRIAR TAREFA PARA ESTA DATA/HORA ======
+        // ====== CRIAR TAREFA ======
         const horaParts = hora.split(':');
         const horaInicio = parseInt(horaParts[0]);
         const horaFim = horaInicio + 1;
@@ -1757,19 +2055,19 @@ async function addActivity() {
         
         const taskName = materia ? `${nome} - ${materia}` : nome;
 
-        // Verificar se já existe tarefa para esta data/hora
+        // Verificar se já existe tarefa
         const tasksResponse = await fetch(`${API_URL}/tasks/aluno/${alunoId}`);
         const tasks = await tasksResponse.json();
         const existingTask = tasks.find(t => t.data === dataSelecionada && t.timeStart === hora && t.scheduleId === currentScheduleId);
 
         if (existingTask) {
-            showToast('⚠️ Já existe uma tarefa para este horário nesta data!', 'warning');
+            showToast('⚠️ Já existe uma tarefa para este horário!', 'warning');
             closeActivityModal();
             await renderScheduleGrid(currentScheduleId, 'adm');
             return;
         }
 
-        const taskResponse = await fetch(`${API_URL}/tasks`, {
+        await fetch(`${API_URL}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1785,17 +2083,9 @@ async function addActivity() {
             })
         });
 
-        if (!taskResponse.ok) {
-            const error = await taskResponse.json();
-            console.warn('⚠️ Tarefa criada com aviso:', error);
-        } else {
-            const task = await taskResponse.json();
-            console.log('✅ Tarefa criada:', task);
-            showToast('✅ Atividade adicionada e tarefa criada!', 'success');
-        }
-
         closeActivityModal();
         await renderScheduleGrid(currentScheduleId, 'adm');
+        showToast('✅ Atividade adicionada e tarefa criada!', 'success');
         
     } catch (error) {
         console.error('❌ Erro ao adicionar atividade:', error);
@@ -1813,7 +2103,6 @@ async function removeActivitySchedule(dia, hora, data) {
             return;
         }
 
-        // Buscar e deletar a tarefa
         const tasksResponse = await fetch(`${API_URL}/tasks/aluno/${alunoId}`);
         const tasks = await tasksResponse.json();
         const taskToDelete = tasks.find(t => t.data === data && t.timeStart === hora && t.scheduleId === currentScheduleId);
@@ -1821,8 +2110,6 @@ async function removeActivitySchedule(dia, hora, data) {
         if (taskToDelete) {
             await fetch(`${API_URL}/tasks/${taskToDelete.id}`, { method: 'DELETE' });
             showToast('🗑️ Atividade removida', 'info');
-        } else {
-            showToast('⚠️ Tarefa não encontrada', 'warning');
         }
 
         await renderScheduleGrid(currentScheduleId, 'adm');
@@ -1859,10 +2146,6 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         isUpdating = true;
         const taskIdStr = String(taskId);
         
-        console.log(`🔄 Atualizando tarefa ${taskIdStr} para "${newStatus}" via grade`);
-        
-        showToast('⏳ Atualizando status...', 'info');
-        
         const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1879,7 +2162,6 @@ async function updateTaskFromSchedule(taskId, newStatus) {
         }
         
         const data = await response.json();
-        console.log('✅ Resposta:', data);
         
         if (data.success) {
             await loadAlunoData();
@@ -1934,9 +2216,6 @@ async function confirmNotDone() {
     try {
         isUpdating = true;
         const taskIdStr = String(taskId);
-        console.log(`❌ Marcando tarefa ${taskIdStr} como Não Feito`);
-        
-        showToast('⏳ Atualizando...', 'info');
         
         const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
@@ -2003,9 +2282,6 @@ async function confirmRecover() {
     try {
         isUpdating = true;
         const taskIdStr = String(taskId);
-        console.log(`🔄 Recuperando tarefa ${taskIdStr}`);
-        
-        showToast('⏳ Recuperando tarefa...', 'info');
         
         const response = await fetch(`${API_URL}/tasks/${taskIdStr}/status`, {
             method: 'PUT',
@@ -2060,17 +2336,17 @@ async function setupAlunoView() {
     updateAlunoXP();
     await checkAchievements();
     await alunoLoadSchedules();
+    await renderAlunoQuestions();
 }
 
 async function loadAlunoData() {
     try {
-        const response = await fetch(`${API_URL}/users/aluno/${currentUser.id}`);
+        const response = await fetch(`${API_URL}/users/${currentUser.id}`);
         const aluno = await response.json();
         if (aluno) {
             currentUser.xp = aluno.xp || 0;
             currentUser.level = aluno.level || 1;
             currentUser.achievements = aluno.achievements || [];
-            console.log('📊 Dados do aluno carregados:', currentUser);
         }
     } catch (error) {
         console.error('Erro ao carregar dados do aluno:', error);
@@ -2224,25 +2500,112 @@ async function renderAlunoQuestions() {
 }
 
 // ============================================================
-// 📌 LISTA DE TAREFAS DO ADM COM FILTRO
+// 👨‍🏫 FUNÇÕES DO ASSESSOR (DÚVIDAS)
+// ============================================================
+
+async function admRenderQuestions() {
+    const container = document.getElementById('adm-questions-list');
+    const badge = document.getElementById('adm-questions-badge');
+    const filterAluno = document.getElementById('adm-questions-aluno').value;
+    const filterStatus = document.getElementById('adm-questions-status').value;
+    
+    try {
+        let url = `${API_URL}/questions/user/${currentUser.id}`;
+        const params = new URLSearchParams();
+        if (filterStatus && filterStatus !== 'all') {
+            params.append('status', filterStatus);
+        }
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        let questions = await response.json();
+        
+        if (filterAluno && filterAluno !== 'all') {
+            questions = questions.filter(q => q.alunoId === filterAluno);
+        }
+        
+        const newCount = questions.filter(q => q.status === 'Nova').length;
+        
+        if (newCount > 0) {
+            badge.classList.remove('hidden');
+            badge.textContent = newCount;
+        } else {
+            badge.classList.add('hidden');
+        }
+        
+        if (questions.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma dúvida no momento</p>';
+            return;
+        }
+        
+        container.innerHTML = questions.map(q => `
+            <div class="question-item ${q.status === 'Nova' ? 'new-question' : ''}">
+                <strong>${q.alunoName || 'Aluno'}</strong>
+                <span class="badge ${q.status === 'Nova' ? 'badge-new' : 'badge-done'}">${q.status}</span>
+                <p style="margin:8px 0;">${q.text}</p>
+                ${q.answer ? `<div class="answer-box">✅ ${q.answer}</div>` : ''}
+                ${q.status !== 'Respondida' ? `
+                    <button class="btn btn-small btn-primary mt-1" onclick="admAnswerQuestion('${q.id}')">
+                        ✏️ Responder
+                    </button>
+                ` : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar dúvidas:', error);
+        container.innerHTML = '<p style="color:var(--accent-red);">Erro ao carregar dúvidas</p>';
+    }
+}
+
+async function admAnswerQuestion(qId) {
+    const answer = prompt('Digite a resposta:');
+    if (!answer || !answer.trim()) return;
+    
+    try {
+        await fetch(`${API_URL}/questions/${qId}/answer`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answer: answer.trim() })
+        });
+        
+        await admRenderQuestions();
+        showToast('✅ Resposta enviada!', 'success');
+    } catch (error) {
+        console.error('Erro ao responder:', error);
+        showToast('❌ Erro ao responder', 'error');
+    }
+}
+
+// ============================================================
+// 📌 LISTA DE TAREFAS COM FILTROS
 // ============================================================
 
 async function admRenderTasks() {
     const filterAluno = document.getElementById('adm-filter-aluno').value;
-    const filterData = document.getElementById('adm-filter-data').value;
+    const dataInicio = document.getElementById('adm-filter-data-inicio').value;
+    const dataFim = document.getElementById('adm-filter-data-fim').value;
     const container = document.getElementById('adm-tasks-list');
     
     try {
-        const response = await fetch(`${API_URL}/tasks/admin/${currentUser.id}`);
-        let tasks = await response.json();
-        
-        if (filterAluno !== 'all') {
-            tasks = tasks.filter(t => t.alunoId === filterAluno);
+        let url = `${API_URL}/tasks/user/${currentUser.id}`;
+        const params = new URLSearchParams();
+        if (filterAluno && filterAluno !== 'all') {
+            params.append('alunoId', filterAluno);
+        }
+        if (dataInicio) {
+            params.append('dataInicio', dataInicio);
+        }
+        if (dataFim) {
+            params.append('dataFim', dataFim);
+        }
+        if (params.toString()) {
+            url += '?' + params.toString();
         }
         
-        if (filterData) {
-            tasks = tasks.filter(t => t.data === filterData);
-        }
+        const response = await fetch(url);
+        const tasks = await response.json();
         
         if (tasks.length === 0) {
             container.innerHTML = '<p style="color:var(--text-secondary);">Nenhuma tarefa encontrada</p>';
@@ -2255,11 +2618,6 @@ async function admRenderTasks() {
             'Realizado': 'badge-done',
             'Não Feito': 'badge-notdone'
         };
-        
-        tasks.sort((a,b) => {
-            if (a.data !== b.data) return a.data.localeCompare(b.data);
-            return a.timeStart.localeCompare(b.timeStart);
-        });
         
         container.innerHTML = tasks.map(t => `
             <div class="task-item slide-in">
@@ -2294,14 +2652,139 @@ async function admDeleteTask(taskId) {
 }
 
 // ============================================================
-// 📋 REGISTRO DE ATIVIDADES
+// 📊 RELATÓRIO
 // ============================================================
 
-async function admRenderActivityLog() {
-    const container = document.getElementById('adm-activity-log');
+async function admGerarRelatorio() {
+    const filterAluno = document.getElementById('adm-filter-aluno').value;
+    const dataInicio = document.getElementById('adm-filter-data-inicio').value;
+    const dataFim = document.getElementById('adm-filter-data-fim').value;
+    
+    if (!filterAluno || filterAluno === 'all') {
+        showToast('⚠️ Selecione um aluno específico para o relatório!', 'warning');
+        return;
+    }
     
     try {
-        const response = await fetch(`${API_URL}/logs/admin/${currentUser.id}`);
+        showToast('⏳ Gerando relatório...', 'info');
+        
+        let url = `${API_URL}/reports/aluno/${filterAluno}`;
+        const params = new URLSearchParams();
+        if (dataInicio) params.append('dataInicio', dataInicio);
+        if (dataFim) params.append('dataFim', dataFim);
+        if (params.toString()) url += '?' + params.toString();
+        
+        const response = await fetch(url);
+        const report = await response.json();
+        
+        const modal = document.getElementById('report-modal');
+        const content = document.getElementById('report-content');
+        
+        // Estatísticas
+        const stats = report.estatisticas;
+        const aluno = report.aluno;
+        
+        content.innerHTML = `
+            <div style="margin-bottom:20px;">
+                <h4 style="color:var(--accent-blue);">📊 Relatório de ${aluno.name}</h4>
+                <p style="color:var(--text-secondary);font-size:12px;">
+                    Período: ${report.periodo.dataInicio || 'Todas'} → ${report.periodo.dataFim || 'Todas'}
+                </p>
+                <p style="color:var(--text-secondary);font-size:12px;">
+                    Nível ${aluno.level} • ${aluno.xp} XP
+                </p>
+            </div>
+            
+            <div class="report-stats">
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalTarefas}</div>
+                    <div class="stat-label">Total Tarefas</div>
+                </div>
+                <div class="stat-card" style="border-color:var(--accent-green);">
+                    <div class="stat-number" style="color:var(--accent-green);">${stats.tarefasRealizadas}</div>
+                    <div class="stat-label">✅ Realizadas</div>
+                </div>
+                <div class="stat-card" style="border-color:var(--accent-orange);">
+                    <div class="stat-number" style="color:var(--accent-orange);">${stats.tarefasPendentes}</div>
+                    <div class="stat-label">⏳ Pendentes</div>
+                </div>
+                <div class="stat-card" style="border-color:var(--accent-red);">
+                    <div class="stat-number" style="color:var(--accent-red);">${stats.tarefasNaoFeitas}</div>
+                    <div class="stat-label">❌ Não Feitas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.taxaConclusao}%</div>
+                    <div class="stat-label">📈 Taxa de Conclusão</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalDuvidas}</div>
+                    <div class="stat-label">💬 Dúvidas</div>
+                </div>
+            </div>
+            
+            <div style="margin-top:15px;">
+                <h5 style="color:var(--text-secondary);">📋 Últimas Atividades</h5>
+                <div style="max-height:200px;overflow-y:auto;margin-top:10px;">
+                    ${report.logs.slice(0, 10).map(log => `
+                        <div style="padding:5px 0;border-bottom:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);">
+                            ${log.timestamp} - ${log.alunoName} | ${log.taskName}
+                            ${log.oldStatus} → ${log.newStatus}
+                            ${log.justification ? `<br><small>📝 ${log.justification}</small>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div style="margin-top:15px;">
+                <h5 style="color:var(--text-secondary);">🏆 Conquistas</h5>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                    ${aluno.achievements && aluno.achievements.includes('ach1') ? '<span class="badge badge-done">🏆 5 Tarefas</span>' : ''}
+                    ${aluno.achievements && aluno.achievements.includes('ach2') ? '<span class="badge badge-done">💡 3 Dúvidas</span>' : ''}
+                    ${aluno.achievements && aluno.achievements.includes('ach3') ? '<span class="badge badge-done">🔄 Recuperação</span>' : ''}
+                    ${(!aluno.achievements || aluno.achievements.length === 0) ? '<span style="color:var(--text-secondary);font-size:12px;">Nenhuma conquista ainda</span>' : ''}
+                </div>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        showToast('❌ Erro ao gerar relatório: ' + error.message, 'error');
+    }
+}
+
+function closeReportModal() {
+    document.getElementById('report-modal').classList.add('hidden');
+}
+
+// ============================================================
+// 📋 LOGS
+// ============================================================
+
+async function admRenderLogs() {
+    const container = document.getElementById('adm-activity-log');
+    const filterAluno = document.getElementById('adm-log-aluno').value;
+    const dataInicio = document.getElementById('adm-log-data-inicio').value;
+    const dataFim = document.getElementById('adm-log-data-fim').value;
+    
+    try {
+        let url = `${API_URL}/logs/user/${currentUser.id}`;
+        const params = new URLSearchParams();
+        if (filterAluno && filterAluno !== 'all') {
+            params.append('alunoId', filterAluno);
+        }
+        if (dataInicio) {
+            params.append('dataInicio', dataInicio);
+        }
+        if (dataFim) {
+            params.append('dataFim', dataFim);
+        }
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
         const logs = await response.json();
         
         if (logs.length === 0) {
@@ -2355,9 +2838,10 @@ async function renderAll() {
         isRendering = true;
         console.log('🔄 Renderizando...');
         
-        if (currentUser.role === 'adm') {
+        if (currentUser.role === 'adm' || currentUser.role === 'assessor') {
             await admRenderTasks();
-            await admRenderActivityLog();
+            await admRenderQuestions();
+            await admRenderLogs();
             await updateAdmAlunosList();
             await updateAdmSelects();
             await updateAdmScheduleSelect();
@@ -2412,7 +2896,7 @@ function showToast(message, type = 'info') {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎓 StudyQuest com Neo4j inicializado!');
-    console.log('👨‍🏫 Login ADM: David / david0724');
+    console.log('👑 Login Admin: David / david0724');
     console.log('🎒 Login Aluno: Malu / Malu123');
 });
 
